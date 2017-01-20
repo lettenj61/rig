@@ -1,0 +1,8 @@
+[package]
+authors = ["lettenj61 <lettenj61@users.noreply.github.com>"]
+name = "vtol"
+version = "0.1.0"
+
+[dependencies]
+nom = "2.0.1"
+rand = "0.3.15"
