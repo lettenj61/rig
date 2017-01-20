@@ -68,3 +68,22 @@ mod format_test {
         assert_eq!(format(p, "packaged".into()), "path/to/my/directory");
     }
 }
+
+mod template_test {
+
+    use std::collections::HashMap;
+    use vtol::template::{self, Template};
+
+    use std::io;
+
+    #[test]
+    fn compile_inline() {
+        let mut ctx: HashMap<String, String> = HashMap::new();
+        ctx.insert("name".to_owned(), "Rust".to_owned());
+
+        let mut out = Vec::new();
+
+        Template::compile_inline("Hello, $name$!", &mut out, ctx).unwrap();
+        assert_eq!(::std::str::from_utf8(&out).unwrap(), "Hello, Rust!");
+    }
+}
