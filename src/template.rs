@@ -16,9 +16,9 @@ impl Template {
     }
 
     pub fn compile_inline<'a, S, W>(template: S,
-                                writer: &'a mut W,
-                                context: HashMap<String, String>)
-                                -> Result<&'a mut W, io::Error>
+                                    writer: &'a mut W,
+                                    context: HashMap<String, String>)
+                                    -> Result<&'a mut W, io::Error>
         where S: AsRef<str>,
               W: Write
     {
@@ -41,9 +41,9 @@ impl Template {
     }
 
     pub fn write<'a, W: Write>(&mut self,
-                           writer: &'a mut W,
-                           context: HashMap<String, String>)
-                           -> Result<&'a mut W, io::Error> {
+                               writer: &'a mut W,
+                               context: HashMap<String, String>)
+                               -> Result<&'a mut W, io::Error> {
 
         let chars = self.body.as_bytes().into_iter();
         let mut found_opening = false;
