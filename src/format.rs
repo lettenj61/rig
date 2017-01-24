@@ -58,26 +58,19 @@ impl<'a> From<&'a str> for Format {
     }
 }
 
-
 #[derive(Clone, Debug, Default)]
 pub struct Placeholder {
-    style: Style,
     key: String,
     args: Vec<Format>,
 }
 
 impl Placeholder {
 
-    pub fn with_style(style: Style, key: &str, args: Vec<&str>) -> Placeholder {
+    pub fn new(key: &str, args: Vec<&str>) -> Placeholder {
         Placeholder {
-            style: style,
             key: key.into(),
             args: args.iter().map(|&s| Format::from(s)).filter(|f| *f != Format::Ident).collect(),
         }
-    }
-
-    pub fn new(key: &str, args: Vec<&str>) -> Placeholder {
-        Placeholder::with_style(Style::Simple, key, args)
     }
 
     pub fn no_format(key: &str) -> Placeholder {
@@ -93,7 +86,7 @@ impl Placeholder {
             2 => {
                 let key = args[0];
                 let formats = args[1].split(',').collect::<Vec<_>>();
-                Ok(Placeholder::with_style(Style::Giter8, &key, formats))
+                Ok(Placeholder::new(&key, formats))
             },
             _ => Err("Too many separators in placeholder.".into()),
         }
@@ -109,7 +102,7 @@ impl Placeholder {
                 let key = args[0];
                 let raw_format = args[1].replace('"', "").replace("format=", "");
                 let formats = raw_format.split(',').collect::<Vec<_>>();
-                Ok(Placeholder::with_style(Style::Giter8, &key, formats))
+                Ok(Placeholder::new(&key, formats))
             },
             _ => Err("Too many separators in placeholder.".into()),
         }
@@ -121,11 +114,11 @@ impl Placeholder {
         match args.len() {
             0 => Err("File / directory name cannot be empty.".into()),
             2 => {
-                let ph = args[0];
+                let key = args[0];
                 let formats = args[1]
                     .split('_')
                     .collect::<Vec<_>>();
-                Ok(Placeholder::new(&ph, formats))
+                Ok(Placeholder::new(&key, formats))
             },
             _ => Ok(Placeholder::no_format(expr)), // ignore more than two separators
         }

@@ -87,6 +87,15 @@ mod format_test {
 
         assert_eq!(ph.format_with(&ctx), "a-si-mple-p-roj".to_owned());
     }
+
+    #[test]
+    fn placeholder_dirname() {
+        let ph = Placeholder::parse_dirname("twitter_id__word_cap").unwrap();
+        let mut ctx: HashMap<String, String> = HashMap::new();
+        ctx.insert("twitter_id".to_owned(), "bar3s%Ye".to_owned());
+
+        assert_eq!(ph.format_with(&ctx), "Bar3sye".to_owned());
+    }
 }
 
 mod template_test {
