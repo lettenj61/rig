@@ -1,8 +1,8 @@
-extern crate vtol;
+extern crate rig;
 
 mod format_test {
 
-    use vtol::format::format;
+    use rig::format::format;
 
     const W: &'static str = "Fabulous Is Rust";
 
@@ -72,7 +72,8 @@ mod format_test {
 mod template_test {
 
     use std::collections::HashMap;
-    use vtol::template::{self, Template};
+    use std::str;
+    use rig::template::Template;
 
     use std::io;
 
@@ -84,6 +85,6 @@ mod template_test {
         let mut out = Vec::new();
 
         Template::compile_inline("Hello, $name$!", &mut out, ctx).unwrap();
-        assert_eq!(::std::str::from_utf8(&out).unwrap(), "Hello, Rust!");
+        assert_eq!(str::from_utf8(&out).unwrap(), "Hello, Rust!");
     }
 }

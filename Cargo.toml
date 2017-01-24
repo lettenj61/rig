@@ -1,6 +1,6 @@
 [package]
 authors = ["lettenj61 <lettenj61@users.noreply.github.com>"]
-name = "vtol"
+name = "rig"
 version = "0.1.0"
 
 [dependencies]

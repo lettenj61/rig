@@ -11,10 +11,13 @@ pub struct Template {
 }
 
 impl Template {
+
+    /// Create `Template` object from given `str`.
     pub fn read_str<S: AsRef<str>>(template: S) -> Template {
         Template { body: String::from(template.as_ref()) }
     }
 
+    /// Create template from given `str`, and instantly compile it.
     pub fn compile_inline<'a, S, W>(template: S,
                                     writer: &'a mut W,
                                     context: HashMap<String, String>)
@@ -26,20 +29,30 @@ impl Template {
         Template::write(&mut template, writer, context)
     }
 
+    /// Replace all placeholders its holding with values from given context.
     fn process(&self, ph: &str, context: &HashMap<String, String>) -> Option<String> {
 
         let args = ph.split(';').collect::<Vec<_>>();
 
-        if args.len() == 1 {
-            match context.get(args[0]) {
-                Some(v) => Some(v.clone()),
-                _ => None,
-            }
-        } else {
-            None
+        match args.len() {
+            1 => context.get(args[0]).cloned(), // TODO: encode `None` with proper `Err`.
+            2 => {
+                if let Some(v) = context.get(args[0]) {
+                    let mut ret = v.clone();
+                    let fmt_args = args[1].split(',').skip(1).collect::<Vec<_>>();
+                    for f in fmt_args {
+                        ret = format(&ret, f.into());
+                    }
+                    Some(ret)
+                } else {
+                    None // TODO: shuld return `Err` when expecting keys not found.
+                }
+            },
+            _ => None // TODO: notice when parsing / formatting error occurs!
         }
     }
 
+    /// Process template with given `context`, and write result into `writer`.
     pub fn write<'a, W: Write>(&mut self,
                                writer: &'a mut W,
                                context: HashMap<String, String>)

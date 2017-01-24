@@ -1,5 +1,5 @@
 [root]
-name = "vtol"
+name = "rig"
 version = "0.1.0"
 dependencies = [
  "nom 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
