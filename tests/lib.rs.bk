@@ -2,8 +2,7 @@ extern crate rig;
 
 mod format_test {
 
-    use std::collections::HashMap;
-    use rig::format::{format, Placeholder};
+    use rig::format::format;
 
     const W: &'static str = "Fabulous Is Rust";
 
@@ -35,8 +34,7 @@ mod format_test {
     #[test]
     fn word_only() {
         let includes_ctrls = "_!$what'is-this@charac#ters??";
-        assert_eq!(format(includes_ctrls, "word".into()),
-                   "_whatisthischaracters");
+        assert_eq!(format(includes_ctrls, "word".into()), "_whatisthischaracters");
     }
 
     #[test]
@@ -69,24 +67,6 @@ mod format_test {
         let p = "path.to.my.directory";
         assert_eq!(format(p, "packaged".into()), "path/to/my/directory");
     }
-
-    #[test]
-    fn placeholder_giter8() {
-        let ph = Placeholder::parse_g8(r#"project_name;format="upper,hyphen""#).unwrap();
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("project_name".to_owned(), "A simple proj".to_owned());
-
-        assert_eq!(ph.format_with(&ctx), "A-SIMPLE-PROJ".to_owned());
-    }
-
-    #[test]
-    fn placeholder_simple() {
-        let ph = Placeholder::parse_simple("project_name;norm").unwrap();
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("project_name".to_owned(), "A si\nmPLe         p\trOj".to_owned());
-
-        assert_eq!(ph.format_with(&ctx), "a-si-mple-p-roj".to_owned());
-    }
 }
 
 mod template_test {
@@ -95,6 +75,8 @@ mod template_test {
     use std::str;
     use rig::template::Template;
 
+    use std::io;
+
     #[test]
     fn compile_inline() {
         let mut ctx: HashMap<String, String> = HashMap::new();
@@ -102,20 +84,18 @@ mod template_test {
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, "Hello, $name$!", ctx).unwrap();
+        Template::compile_inline("Hello, $name$!", &mut out, ctx).unwrap();
         assert_eq!(str::from_utf8(&out).unwrap(), "Hello, Rust!");
     }
 
     #[test]
     fn format_template() {
         let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("DOCUMENT_NAME".to_owned(),
-                   "RUST PROGRAMMING LANGUAGE".to_owned());
+        ctx.insert("DOCUMENT_NAME".to_owned(), "RUST PROGRAMMING LANGUAGE".to_owned());
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, "It's a $DOCUMENT_NAME;camel$", ctx).unwrap();
-        assert_eq!(str::from_utf8(&out).unwrap(),
-                   "It's a rustProgrammingLanguage".to_owned());
+        Template::compile_inline("It's a $DOCUMENT_NAME;camel$", &mut out, ctx).unwrap();
+        assert_eq!(str::from_utf8(&out).unwrap(), "It's a rustProgrammingLanguage".to_owned());
     }
 }

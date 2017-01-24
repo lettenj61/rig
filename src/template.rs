@@ -11,15 +11,14 @@ pub struct Template {
 }
 
 impl Template {
-
     /// Create `Template` object from given `str`.
     pub fn read_str<S: AsRef<str>>(template: S) -> Template {
         Template { body: String::from(template.as_ref()) }
     }
 
     /// Create template from given `str`, and instantly compile it.
-    pub fn compile_inline<'a, S, W>(template: S,
-                                    writer: &'a mut W,
+    pub fn compile_inline<'a, S, W>(writer: &'a mut W,
+                                    template: S,
                                     context: HashMap<String, String>)
                                     -> Result<&'a mut W, io::Error>
         where S: AsRef<str>,
@@ -39,7 +38,7 @@ impl Template {
             2 => {
                 if let Some(v) = context.get(args[0]) {
                     let mut ret = v.clone();
-                    let fmt_args = args[1].split(',').skip(1).collect::<Vec<_>>();
+                    let fmt_args = args[1].split(',').collect::<Vec<_>>();
                     for f in fmt_args {
                         ret = format(&ret, f.into());
                     }
@@ -47,8 +46,8 @@ impl Template {
                 } else {
                     None // TODO: shuld return `Err` when expecting keys not found.
                 }
-            },
-            _ => None // TODO: notice when parsing / formatting error occurs!
+            }
+            _ => None, // TODO: notice when parsing / formatting error occurs!
         }
     }
 
