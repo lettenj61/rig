@@ -127,4 +127,19 @@ mod template_test {
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "It's a rustProgrammingLanguage".to_owned());
     }
+
+    #[test]
+    fn giter8_template() {
+        let mut ctx: HashMap<String, String> = HashMap::new();
+        ctx.insert("name".to_owned(),
+                   "awesome distributed interface".to_owned());
+
+        let mut out = Vec::new();
+
+        let mut tpl = Template::new_g8(r#"trait $name;format="Camel"$[-A] extends js.Dictionary[A]"#);
+        tpl.write(&mut out, ctx).unwrap();
+
+        assert_eq!(str::from_utf8(&out).unwrap(),
+                   "trait AwesomeDistributedInterface[-A] extends js.Dictionary[A]".to_owned());
+    }
 }

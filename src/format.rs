@@ -2,10 +2,11 @@ use std::ascii::AsciiExt;
 use std::collections::HashMap;
 use std::convert::From;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Style {
     Simple,
     Giter8,
+    Pathname,
 }
 
 impl Default for Style {

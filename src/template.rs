@@ -2,18 +2,27 @@ use std::collections::HashMap;
 use std::convert::From;
 use std::io::{self, Write};
 
-use super::format::{Format, format};
+use super::format::{Placeholder, Style};
 
 /// Minimal template for any kind of plain text.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Template {
-    pub body: String,
+    style: Style,
+    body: String,
 }
 
 impl Template {
     /// Create `Template` object from given `str`.
-    pub fn read_str<S: AsRef<str>>(template: S) -> Template {
-        Template { body: String::from(template.as_ref()) }
+    pub fn read_str<S: AsRef<str>>(style: Style, template: S) -> Template {
+        Template {
+            style: style,
+            body: String::from(template.as_ref())
+        }
+    }
+
+    /// Utility to create giter8 style template instantly.
+    pub fn new_g8<S: AsRef<str>>(template: S) -> Template {
+        Template::read_str(Style::Giter8, template)
     }
 
     /// Create template from given `str`, and instantly compile it.
@@ -24,31 +33,22 @@ impl Template {
         where S: AsRef<str>,
               W: Write
     {
-        let mut template = Template::read_str(template);
+        let mut template = Template::read_str(Style::Simple, template);
         Template::write(&mut template, writer, context)
     }
 
     /// Replace all placeholders its holding with values from given context.
     fn process(&self, ph: &str, context: &HashMap<String, String>) -> Option<String> {
 
-        let args = ph.split(';').collect::<Vec<_>>();
+        let parsed = match self.style {
+            Style::Simple => Placeholder::parse_simple(ph),
+            Style::Giter8 => Placeholder::parse_g8(ph),
+            Style::Pathname => Placeholder::parse_dirname(ph),
+        };
 
-        match args.len() {
-            1 => context.get(args[0]).cloned(), // TODO: encode `None` with proper `Err`.
-            2 => {
-                if let Some(v) = context.get(args[0]) {
-                    let mut ret = v.clone();
-                    let fmt_args = args[1].split(',').collect::<Vec<_>>();
-                    for f in fmt_args {
-                        ret = format(&ret, f.into());
-                    }
-                    Some(ret)
-                } else {
-                    None // TODO: shuld return `Err` when expecting keys not found.
-                }
-            }
-            _ => None, // TODO: notice when parsing / formatting error occurs!
-        }
+        // TODO: encode missing key in `context` with proper `Err`
+        // TODO: return `Err` when parsing fails
+        parsed.map(|ph| ph.format_with(context)).ok()
     }
 
     /// Process template with given `context`, and write result into `writer`.
@@ -68,8 +68,8 @@ impl Template {
                 // flush out the chunk that are not placeholder
                 try!(writer.write(&self.body[last_written..marker - 1].as_bytes()));
 
-                let placeholder = &self.body[marker..pos];
-                if let Some(value) = self.process(placeholder, &context) {
+                let ph = &self.body[marker..pos];
+                if let Some(value) = self.process(ph, &context) {
                     try!(writer.write(&value.as_bytes()));
                 } else {
                     try!(writer.write(&self.body[marker..pos].as_bytes()));
