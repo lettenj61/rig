@@ -1,5 +1,7 @@
-extern crate env_proxy;
+extern crate env_logger;
 extern crate git2;
+#[macro_use]
+extern crate log;
 extern crate tempdir;
 extern crate url;
 extern crate walkdir;
@@ -9,10 +11,8 @@ extern crate rig;
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
-use std::io;
-use std::path::Path;
 
-use git2::{Config, FetchOptions, Repository};
+use git2::{Config as Git2Config, FetchOptions};
 use git2::build::RepoBuilder;
 use rig::fsutils;
 use tempdir::TempDir;
@@ -23,18 +23,15 @@ fn find_proxy_url() -> Option<Url> {
 
     // environment variables are first priority
     if let Some(env_val) = env::var_os("http_proxy") {
-
         Url::parse(&env_val.to_string_lossy()).ok()
-
     } else {
-
         // if no env vars set, look for git global config
-        if let Ok(global_conf) = Config::find_global() {
+        if let Ok(global_conf) = Git2Config::find_global() {
 
-            if let Ok(config) = Config::open(global_conf.as_path()) {
+            if let Ok(config) = Git2Config::open(global_conf.as_path()) {
                 config.get_string("http.proxy").map(|v| Url::parse(&v).unwrap()).ok()
             } else {
-                println!("WARN: Cannot locate or open git global configuration");
+                warn!("Cannot locate or open git global configuration");
                 None
             }
 
@@ -51,18 +48,21 @@ fn is_git_metadata(entry: &DirEntry) -> bool {
 
 fn main() {
 
-    extern crate rig;
+    env_logger::init().unwrap();
+    let dry_run = true;
 
-    let mut output_dir = env::current_dir().expect("Failed to locate current directory!");
+    let clone_root = TempDir::new("__rig_template").expect("Failed to create temporal directory!");
+
+    let mut output_dir = clone_root.path()
+        .parent()
+        .map(|p| p.to_path_buf())
+        .expect("Failed to locate current directory!");
     output_dir.push("_test_out");
 
     if fsutils::exists(&output_dir) {
         fs::remove_dir_all(&output_dir).expect("Cannot overwrite existing output directory!");
     }
     fs::create_dir_all(&output_dir).unwrap();
-
-    let clone_root = TempDir::new("__rig_template")
-                     .expect("Failed to create temporal directory!");
 
     let url = Url::parse("https://github.com/n8han/giter8.g8").unwrap();
     let mut _in = String::new();
@@ -79,9 +79,9 @@ fn main() {
         repo.fetch_options(fetch);
     }
 
-    println!("Cloning remote git repository: {:?} into {:?}",
-             url,
-             clone_root.path());
+    info!("Cloning remote git repository: {:?} into {:?}",
+          url,
+          clone_root.path());
     let _ = repo.clone(url.as_ref(), &clone_root.path()).unwrap();
 
     let walker = WalkDir::new(&clone_root.path()).into_iter();
@@ -90,7 +90,7 @@ fn main() {
         let entry = entry.unwrap();
 
         if entry.file_name() == clone_root.path().file_name().unwrap() {
-            println!("skipping {:?}", entry.file_name());
+            debug!("skipping {:?}", entry.file_name());
             continue;
         }
 
@@ -115,16 +115,16 @@ fn main() {
             }
         }
         dest.push(entry.file_name());
-        println!("{:?}", dest);
+        debug!("{:?}", dest);
 
-        if entry.file_type().is_file() {
-            fs::copy(&entry.path(), dest.as_path())
-                .expect("Failed to copy file");
-        } else if entry.file_type().is_dir() {
-            fs::create_dir(dest.as_path())
-                    .expect("Failed to copy directory");
+        if !dry_run {
+            if entry.file_type().is_file() {
+                fs::copy(&entry.path(), dest.as_path()).expect("Failed to copy file");
+            } else if entry.file_type().is_dir() {
+                fs::create_dir(dest.as_path()).expect("Failed to copy directory");
+            }
         }
     }
 
-    println!("done.");
+    info!("done.");
 }
