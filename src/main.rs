@@ -1,5 +1,6 @@
 extern crate env_logger;
 extern crate git2;
+extern crate java_properties;
 #[macro_use]
 extern crate log;
 extern crate tempdir;
@@ -11,10 +12,13 @@ extern crate rig;
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
+use std::io::{self, Read};
+use std::path::{Path, PathBuf};
 
 use git2::{Config as Git2Config, FetchOptions};
 use git2::build::RepoBuilder;
 use rig::fsutils;
+use rig::project::{ConfigFormat, Project};
 use tempdir::TempDir;
 use url::Url;
 use walkdir::{DirEntry, WalkDir, WalkDirIterator};
@@ -45,6 +49,18 @@ fn find_proxy_url() -> Option<Url> {
 fn is_git_metadata(entry: &DirEntry) -> bool {
     let is_git = entry.file_name().to_str().map(|s| s == ".git").unwrap_or(false);
     fsutils::is_directory(entry.path()) && is_git
+}
+
+fn ensure_inner_project(path: &Path) -> PathBuf {
+    let mut buf = path.to_path_buf();
+
+    if fsutils::exists(path.join("src/main/g8")) {
+        buf.push("src/main/g8");
+
+        debug!("Found inner project at: {:?}", buf);
+    }
+
+    buf
 }
 
 fn main() {
@@ -89,12 +105,20 @@ fn main() {
           clone_root.path());
     let _ = repo.clone(url.as_ref(), &clone_root.path()).unwrap();
 
-    let walker = WalkDir::new(&clone_root.path()).into_iter();
+    let mut project = Project::new_g8(None);
+    let mut template_root = ensure_inner_project(&clone_root.path());
+
+    let settings = template_root.join(format!("{}", project.config_format));
+    if let Ok(key_value) = fs::File::open(&settings).map(java_properties::read) {
+        println!("{:?}", key_value);
+    }
+
+    let walker = WalkDir::new(&template_root).into_iter();
     for entry in walker.filter_entry(|e| !is_git_metadata(e)) {
 
         let entry = entry.unwrap();
 
-        if entry.file_name() == clone_root.path().file_name().unwrap() {
+        if entry.path() == &template_root {
             debug!("skipping {:?}", entry.file_name());
             continue;
         }

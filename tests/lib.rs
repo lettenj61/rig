@@ -161,29 +161,19 @@ mod template_test {
 
 mod repos_test {
 
-    extern crate git2;
     extern crate tempdir;
 
-    use std::env;
-    use std::io;
+    use std::ffi;
     use std::path::Path;
-
-    use self::git2::Repository;
     use self::tempdir::TempDir;
 
     #[test]
-    fn clone_repo() {
+    fn path_sep() {
 
-        let dir = TempDir::new("rig_g8tpl").expect("err");
-        println!("{:?}", dir.path());
+        let td = TempDir::new("sample-run").unwrap();
+        let mut p = td.into_path();
+        p.push("such/file");
 
-        let url = "https://github.com/n8han/giter8.g8";
-        let mut _in = String::new();
-
-        let repo = Repository::clone(url, &dir.path()).unwrap();
-
-        io::stdin().read_line(&mut _in).expect("cannot read");
-
-        println!("{}", _in);
+        assert_eq!(format!("{:?}", p.file_name().unwrap()), r#""file""#.to_string());
     }
 }
