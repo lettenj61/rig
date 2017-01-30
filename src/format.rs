@@ -66,7 +66,6 @@ pub struct Placeholder {
 }
 
 impl Placeholder {
-
     pub fn new(key: &str, args: Vec<&str>) -> Placeholder {
         Placeholder {
             key: key.into(),
@@ -88,7 +87,7 @@ impl Placeholder {
                 let key = args[0];
                 let formats = args[1].split(',').collect::<Vec<_>>();
                 Ok(Placeholder::new(&key, formats))
-            },
+            }
             _ => Err("Too many separators in placeholder.".into()),
         }
     }
@@ -104,7 +103,7 @@ impl Placeholder {
                 let raw_format = args[1].replace('"', "").replace("format=", "");
                 let formats = raw_format.split(',').collect::<Vec<_>>();
                 Ok(Placeholder::new(&key, formats))
-            },
+            }
             _ => Err("Too many separators in placeholder.".into()),
         }
     }
@@ -120,7 +119,7 @@ impl Placeholder {
                     .split('_')
                     .collect::<Vec<_>>();
                 Ok(Placeholder::new(&key, formats))
-            },
+            }
             _ => Ok(Placeholder::no_format(expr)), // ignore more than two separators
         }
     }

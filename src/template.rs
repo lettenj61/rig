@@ -16,7 +16,7 @@ impl Template {
     pub fn read_str<S: AsRef<str>>(style: Style, template: S) -> Template {
         Template {
             style: style,
-            body: String::from(template.as_ref())
+            body: String::from(template.as_ref()),
         }
     }
 

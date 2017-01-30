@@ -83,7 +83,8 @@ mod format_test {
     fn placeholder_simple() {
         let ph = Placeholder::parse_simple("project_name;norm").unwrap();
         let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("project_name".to_owned(), "A si\nmPLe         p\trOj".to_owned());
+        ctx.insert("project_name".to_owned(),
+                   "A si\nmPLe         p\trOj".to_owned());
 
         assert_eq!(ph.format_with(&ctx), "a-si-mple-p-roj".to_owned());
     }
@@ -136,7 +137,8 @@ mod template_test {
 
         let mut out = Vec::new();
 
-        let mut tpl = Template::new_g8(r#"trait $name;format="Camel"$[-A] extends js.Dictionary[A]"#);
+        let mut tpl =
+            Template::new_g8(r#"trait $name;format="Camel"$[-A] extends js.Dictionary[A]"#);
         tpl.write(&mut out, ctx).unwrap();
 
         assert_eq!(str::from_utf8(&out).unwrap(),
