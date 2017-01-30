@@ -61,7 +61,7 @@ fn main() {
     output_dir.push("_test_out");
 
     if fsutils::exists(&output_dir) {
-        fs::remove_dir_all(&output_dir).expect("Cannot overwrite existing output directory!");
+        fsutils::remove_dir(&output_dir).expect("Cannot overwrite existing output directory!");
     }
     fs::create_dir_all(&output_dir).unwrap();
 
