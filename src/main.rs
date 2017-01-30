@@ -23,6 +23,7 @@ fn find_proxy_url() -> Option<Url> {
 
     // environment variables are first priority
     if let Some(env_val) = env::var_os("http_proxy") {
+        debug!("Setting proxy configuration from environment key: `http_proxy`.");
         Url::parse(&env_val.to_string_lossy()).ok()
     } else {
         // if no env vars set, look for git global config
@@ -51,7 +52,7 @@ fn main() {
     env_logger::init().unwrap();
     let dry_run = true;
 
-    let clone_root = TempDir::new("__rig_template").expect("Failed to create temporal directory!");
+    let clone_root = TempDir::new("rig__template").expect("Failed to create temporal directory!");
 
     let mut output_dir = clone_root.path()
         .parent()
@@ -70,6 +71,8 @@ fn main() {
     let mut repo = RepoBuilder::new();
     if let Some(proxy_url) = find_proxy_url() {
 
+        debug!("Proxy settings found, initializing fetch options.");
+
         let mut proxy = git2::ProxyOptions::new();
         proxy.url(proxy_url.as_ref());
 
@@ -77,6 +80,8 @@ fn main() {
         fetch.proxy_options(proxy);
 
         repo.fetch_options(fetch);
+    } else {
+        debug!("No proxy settings found.")
     }
 
     info!("Cloning remote git repository: {:?} into {:?}",
