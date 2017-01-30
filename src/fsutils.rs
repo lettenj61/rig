@@ -87,14 +87,13 @@ fn rm_rf(path: &Path) -> io::Result<()> {
 
                 match fs::remove_file(file) {
                     Ok(()) => {}
-                    Err(ref e) if cfg!(windows) &&
-                        e.kind() == io::ErrorKind::PermissionDenied => {
-                            let mut p = file.metadata().unwrap().permissions();
-                            p.set_readonly(false);
-                            fs::set_permissions(file, p).unwrap();
-                            try!(fs::remove_file(file));
-                        }
-                    Err(e) => return Err(e)
+                    Err(ref e) if cfg!(windows) && e.kind() == io::ErrorKind::PermissionDenied => {
+                        let mut p = file.metadata().unwrap().permissions();
+                        p.set_readonly(false);
+                        fs::set_permissions(file, p).unwrap();
+                        try!(fs::remove_file(file));
+                    }
+                    Err(e) => return Err(e),
                 }
             }
         }

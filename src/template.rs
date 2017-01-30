@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::convert::From;
 use std::io::{self, Write};
+use std::path::Path;
 
 use super::format::{Placeholder, Style};
+use super::fsutils;
 
 /// Minimal template for any kind of plain text.
 #[derive(Clone, Debug, PartialEq)]
@@ -18,6 +20,11 @@ impl Template {
             style: style,
             body: String::from(template.as_ref()),
         }
+    }
+
+    /// Create `Template` from contents of the file at given `Path`.
+    pub fn read_file<P: AsRef<Path>>(style: Style, src: P) -> Result<Template, io::Error> {
+        fsutils::read_file(src.as_ref()).map(|s| Template::read_str(style, s))
     }
 
     /// Utility to create giter8 style template instantly.
