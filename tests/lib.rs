@@ -143,3 +143,32 @@ mod template_test {
                    "trait AwesomeDistributedInterface[-A] extends js.Dictionary[A]".to_owned());
     }
 }
+
+mod repos_test {
+
+    extern crate git2;
+    extern crate tempdir;
+
+    use std::env;
+    use std::io;
+    use std::path::Path;
+
+    use self::git2::Repository;
+    use self::tempdir::TempDir;
+
+    #[test]
+    fn clone_repo() {
+
+        let dir = TempDir::new("rig_g8tpl").expect("err");
+        println!("{:?}", dir.path());
+
+        let url = "https://github.com/n8han/giter8.g8";
+        let mut _in = String::new();
+
+        let repo = Repository::clone(url, &dir.path()).unwrap();
+
+        io::stdin().read_line(&mut _in).expect("cannot read");
+
+        println!("{}", _in);
+    }
+}
