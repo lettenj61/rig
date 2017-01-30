@@ -68,6 +68,7 @@ impl Template {
         let mut found_opening = false;
         let mut marker = 0;
         let mut last_written = 0;
+        let mut prev = 0u8;
 
         for (pos, ch) in chars.enumerate() {
             if *ch == b'$' && found_opening {
@@ -85,7 +86,7 @@ impl Template {
                 last_written = pos + 1;
                 found_opening = false;
 
-            } else if *ch == b'$' {
+            } else if *ch == b'$' && prev != b'\\' {
                 marker = pos + 1;
                 found_opening = true;
             }
@@ -93,6 +94,8 @@ impl Template {
             if pos == self.body.as_bytes().len() - 1 {
                 try!(writer.write(&self.body[last_written..pos + 1].as_bytes()));
             }
+
+            prev = *ch;
         }
 
         writer.flush().unwrap();

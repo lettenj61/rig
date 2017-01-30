@@ -130,6 +130,19 @@ mod template_test {
     }
 
     #[test]
+    fn escape_character() {
+        let mut ctx: HashMap<String, String> = HashMap::new();
+        ctx.insert("DOCUMENT_NAME".to_owned(),
+                   "RUST PROGRAMMING LANGUAGE".to_owned());
+
+        let mut out = Vec::new();
+
+        Template::compile_inline(&mut out, "It's a \\$DOCUMENT_NAME;camel$", ctx).unwrap();
+        assert_eq!(str::from_utf8(&out).unwrap(),
+                   "It's a \\$DOCUMENT_NAME;camel$".to_owned());
+    }
+
+    #[test]
     fn giter8_template() {
         let mut ctx: HashMap<String, String> = HashMap::new();
         ctx.insert("name".to_owned(),
