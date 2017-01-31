@@ -41,7 +41,7 @@ impl Template {
               W: Write
     {
         let mut template = Template::read_str(Style::Simple, template);
-        Template::write(&mut template, writer, context)
+        Template::write(&mut template, writer, &context)
     }
 
     /// Replace all placeholders its holding with values from given context.
@@ -61,7 +61,7 @@ impl Template {
     /// Process template with given `context`, and write result into `writer`.
     pub fn write<'a, W: Write>(&mut self,
                                writer: &'a mut W,
-                               context: HashMap<String, String>)
+                               context: &HashMap<String, String>)
                                -> Result<&'a mut W, io::Error> {
 
         let chars = self.body.as_bytes().into_iter();
@@ -77,7 +77,7 @@ impl Template {
                 try!(writer.write(&self.body[last_written..marker - 1].as_bytes()));
 
                 let ph = &self.body[marker..pos];
-                if let Some(value) = self.process(ph, &context) {
+                if let Some(value) = self.process(ph, context) {
                     try!(writer.write(&value.as_bytes()));
                 } else {
                     try!(writer.write(&self.body[marker..pos].as_bytes()));

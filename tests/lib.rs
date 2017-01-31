@@ -174,6 +174,7 @@ mod repos_test {
         let mut p = td.into_path();
         p.push("such/file");
 
-        assert_eq!(format!("{:?}", p.file_name().unwrap()), r#""file""#.to_string());
+        assert_eq!(format!("{:?}", p.file_name().unwrap()),
+                   r#""file""#.to_string());
     }
 }

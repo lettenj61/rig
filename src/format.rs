@@ -236,3 +236,8 @@ pub fn format(s: &str, f: Format) -> String {
         _ => s.into(),
     }
 }
+
+pub fn is_placeholder<S: AsRef<str>>(s: S) -> bool {
+    let s = s.as_ref();
+    s.starts_with("$") && s.ends_with("$")
+}
