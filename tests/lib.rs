@@ -152,7 +152,7 @@ mod template_test {
 
         let mut tpl =
             Template::new_g8(r#"trait $name;format="Camel"$[-A] extends js.Dictionary[A]"#);
-        tpl.write(&mut out, ctx).unwrap();
+        tpl.write(&mut out, &ctx).unwrap();
 
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "trait AwesomeDistributedInterface[-A] extends js.Dictionary[A]".to_owned());

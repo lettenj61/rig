@@ -211,7 +211,7 @@ fn dedup_replacing(s: &str, from: char, to: char) -> String {
         s = s.replace(&dupe, &from.to_string());
     }
 
-    s.replace(&dupe, &to.to_string())
+    s.replace(&from.to_string(), &to.to_string())
 }
 
 fn dedup_whitespace(s: &str) -> String {
