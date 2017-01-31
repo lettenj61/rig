@@ -2,18 +2,16 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::fmt;
-use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::result::Result as StdResult;
+use std::str;
 
 use java_properties;
-use tempdir::TempDir;
 use toml;
-use url::Url;
 use walkdir::{DirEntry, WalkDir, WalkDirIterator};
 
 use super::errors::*;
-use super::format::{self, Placeholder, Style};
+use super::format::Style;
 use super::fsutils;
 use super::template::Template;
 
@@ -95,7 +93,7 @@ impl Project {
         let walker = WalkDir::new(&root).into_iter();
 
         let mut file_map: HashMap<String, String> = HashMap::new();
-        let default_ctx = clone_root.join(format!("{}", &self.config_format));
+        let default_ctx = root.join(format!("{}", &self.config_format));
 
         if !dry_run {
             fs::create_dir_all(dest).unwrap();
@@ -122,12 +120,13 @@ impl Project {
                 rel_path_up = parent.parent();
             }
 
-            let from = entry.path().to_string_lossy().to_string();
+            let base = entry.file_name().to_string_lossy().to_string();
             let mut dest = dest.to_path_buf();
             if !segment.is_empty() {
                 segment.reverse();
                 for part in segment {
-                    if let Some(rep) = file_map.get(&from) {
+                    if let Some(rep) = file_map.get(&part.to_string_lossy().to_string()) {
+                        debug!("File tree altered: {:?} => {:?}", &part, rep);
                         dest.push(rep);
                     } else {
                         dest.push(part);
@@ -135,13 +134,19 @@ impl Project {
                 }
             }
 
-            let mut name = entry.file_name().to_string_lossy().to_string();
-            if format::is_placeholder(&name) {
-                let ph = Placeholder::parse_dirname(&name).unwrap();
-                name = ph.format_with(&context);
-                file_map.insert(from.clone(), name.clone());
+            
+            let mut writer = Vec::new();
+            Template::compile_inline(&mut writer,
+                                     Style::Pathname,
+                                     &base,
+                                     context)
+                                     .unwrap();
+
+            let name = str::from_utf8(&writer).unwrap();
+            if name != &base {
+                file_map.insert(base.clone(), name.to_string());
             }
-            dest.push(&name);
+            dest.push(name);
             debug!("Destination entry: {:?}", dest);
 
             // TODO:
@@ -163,6 +168,7 @@ impl Project {
                 }
             }
         }
+        debug!("{:?}", &file_map);
 
         Ok(())
     }
@@ -175,7 +181,6 @@ fn is_git_metadata(entry: &DirEntry) -> bool {
 
 fn get_default_context(project: &Project, root_dir: &Path) -> Result<Context> {
     let default_ctx = root_dir.join(format!("{}", project.config_format));
-    debug!("{:?}", default_ctx);
 
     match project.config_format {
         ConfigFormat::JavaProps => {

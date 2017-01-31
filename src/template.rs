@@ -34,14 +34,15 @@ impl Template {
 
     /// Create template from given `str`, and instantly compile it.
     pub fn compile_inline<'a, S, W>(writer: &'a mut W,
+                                    style: Style,
                                     template: S,
-                                    context: HashMap<String, String>)
+                                    context: &HashMap<String, String>)
                                     -> Result<&'a mut W, io::Error>
         where S: AsRef<str>,
               W: Write
     {
-        let mut template = Template::read_str(Style::Simple, template);
-        Template::write(&mut template, writer, &context)
+        let mut template = Template::read_str(style, template);
+        Template::write(&mut template, writer, context)
     }
 
     /// Replace all placeholders its holding with values from given context.
