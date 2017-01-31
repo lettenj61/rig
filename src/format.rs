@@ -211,7 +211,7 @@ fn dedup_replacing(s: &str, from: char, to: char) -> String {
         s = s.replace(&dupe, &from.to_string());
     }
 
-    s.replace(&dupe, &to.to_string())
+    s.replace(&from.to_string(), &to.to_string())
 }
 
 fn dedup_whitespace(s: &str) -> String {
@@ -235,4 +235,9 @@ pub fn format(s: &str, f: Format) -> String {
         Format::DirectoryPath => directory_path(s),
         _ => s.into(),
     }
+}
+
+pub fn is_placeholder<S: AsRef<str>>(s: S) -> bool {
+    let s = s.as_ref();
+    s.starts_with("$") && s.ends_with("$")
 }

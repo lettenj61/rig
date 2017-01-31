@@ -1,31 +1,142 @@
+extern crate docopt;
+extern crate error_chain;
 extern crate env_logger;
 extern crate git2;
 extern crate java_properties;
 #[macro_use]
 extern crate log;
+extern crate rustc_serialize;
 extern crate tempdir;
 extern crate url;
-extern crate walkdir;
 
 extern crate rig;
 
+use std::collections::HashMap;
 use std::env;
-use std::ffi::OsStr;
 use std::fs;
-use std::io::{self, Read};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process::exit;
 
+use docopt::Docopt;
 use git2::{Config as Git2Config, FetchOptions};
 use git2::build::RepoBuilder;
-use rig::fsutils;
-use rig::project::{ConfigFormat, Project};
 use tempdir::TempDir;
 use url::Url;
-use walkdir::{DirEntry, WalkDir, WalkDirIterator};
+
+use rig::errors::*;
+use rig::format::{format, Format};
+use rig::fsutils;
+use rig::project::{ConfigFormat, Project};
+
+const USAGE: &'static str = r#"
+Rig - Generate new project by cloning templates from git repository.
+*NOTE* This software is under early development, most of its features are not yet supported:
+  - Currently it can only use templates that hosted on GitHub
+  - giter8 compatibility features (e.g. maven directive) are not implemented.
+
+Usage:
+    rig <repository> [options]
+    rig (-h | --help)
+    rig (-V | --version)
+
+Options:
+    -h, --help              Show help message
+    -V, --version           Show version
+    --name NAME             Specify project name (overrides default if any)
+    --output PATH           Specify output directory
+    --package PATH          Specify project directory tree (mainly used in giter8 project)
+    --verbatim EXTENSION    Space separeted list of file exts exclude from template processing
+    -Y, --confirm           Use template default value to all parameters (Yes-To-All)
+    --dry-run               Show generation process to STDOUT, without producing any files
+    --giter8                Expects that the template is a giter8 template
+    --no-logo               Supress logo
+"#;
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_repository: String,
+    flag_name: Option<String>,
+    flag_output: Option<String>,
+    flag_package: Option<String>,
+    flag_verbatim: Option<String>,
+    flag_confirm: bool,
+    flag_giter8: bool,
+    flag_dry_run: bool,
+    flag_no_logo: bool, // I wish someday I could draw some logo
+    flag_help: bool,
+    flag_version: bool,
+}
+
+fn main() {
+
+    env_logger::init().unwrap();
+
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
+
+    debug!("{:?}", args);
+
+    if args.flag_version {
+        println!("Rig - 0.1.0");
+        exit(0);
+    }
+
+    // gather info of remote repository & networks
+    let url = normalize_url(&args.arg_repository).unwrap();
+    let mut repo = RepoBuilder::new();
+    if let Some(proxy_url) = find_proxy_url() {
+
+        debug!("Proxy settings found, initializing fetch options.");
+
+        let mut proxy = git2::ProxyOptions::new();
+        proxy.url(proxy_url.as_ref());
+
+        let mut fetch = FetchOptions::new();
+        fetch.proxy_options(proxy);
+
+        repo.fetch_options(fetch);
+    } else {
+        debug!("No proxy settings found.")
+    }
+
+    let clone_root = TempDir::new("rig__template").expect("Failed to create temporal directory");
+    info!("Cloning remote git repository: {:?} into {:?}",
+          url,
+          clone_root.path());
+    let _ = repo.clone(url.as_ref(), &clone_root.path()).unwrap();
+
+    let project = match args.flag_giter8 {
+        true => Project::new_g8(Some("src/main/g8")),
+        false => Default::default(),
+    };
+
+    let mut context = project.default_context(&clone_root.path()).unwrap();
+    debug!("Successfully read default context: {:?}", context);
+
+    if !args.flag_confirm {
+        prompt(&mut context);
+        debug!("Context updated with user input: {:?}", context);
+    }
+
+    // ensure we have real path to output directory
+    let project_name = context.get("name")
+        .cloned()
+        .unwrap_or("Rig Generated Project".to_owned());
+
+    let output_dir = get_output_dir(&args.flag_output, &project_name);
+    debug!("Set output directory: {:?}", output_dir);
+
+    project.generate(&context, &clone_root.path(), &output_dir, args.flag_dry_run).unwrap();
+
+    info!("done.");
+    drop(clone_root);
+}
 
 fn find_proxy_url() -> Option<Url> {
 
-    // environment variables are first priority
+    // we take env vars first
     if let Some(env_val) = env::var_os("http_proxy") {
         debug!("Setting proxy configuration from environment key: `http_proxy`.");
         Url::parse(&env_val.to_string_lossy()).ok()
@@ -46,114 +157,43 @@ fn find_proxy_url() -> Option<Url> {
     }
 }
 
-fn is_git_metadata(entry: &DirEntry) -> bool {
-    let is_git = entry.file_name().to_str().map(|s| s == ".git").unwrap_or(false);
-    fsutils::is_directory(entry.path()) && is_git
-}
-
-fn ensure_inner_project(path: &Path) -> PathBuf {
-    let mut buf = path.to_path_buf();
-
-    if fsutils::exists(path.join("src/main/g8")) {
-        buf.push("src/main/g8");
-
-        debug!("Found inner project at: {:?}", buf);
-    }
-
-    buf
-}
-
-fn main() {
-
-    env_logger::init().unwrap();
-    let dry_run = true;
-
-    let clone_root = TempDir::new("rig__template").expect("Failed to create temporal directory!");
-
-    let mut output_dir = clone_root.path()
-        .parent()
-        .map(|p| p.to_path_buf())
-        .expect("Failed to locate current directory!");
-    output_dir.push("_test_out");
-
-    if fsutils::exists(&output_dir) {
-        fsutils::remove_dir(&output_dir).expect("Cannot overwrite existing output directory!");
-    }
-    fs::create_dir_all(&output_dir).unwrap();
-
-    let url = Url::parse("https://github.com/n8han/giter8.g8").unwrap();
-    let mut _in = String::new();
-
-    let mut repo = RepoBuilder::new();
-    if let Some(proxy_url) = find_proxy_url() {
-
-        debug!("Proxy settings found, initializing fetch options.");
-
-        let mut proxy = git2::ProxyOptions::new();
-        proxy.url(proxy_url.as_ref());
-
-        let mut fetch = FetchOptions::new();
-        fetch.proxy_options(proxy);
-
-        repo.fetch_options(fetch);
+fn normalize_url(raw: &str) -> Result<Url> {
+    if let Some(_) = raw.find('/') {
+        Url::parse(raw)
+            .or(Url::parse(format!("https://github.com/{}", raw).as_ref()))
+            .map_err(|e| ErrorKind::ParseUrl(e).into())
     } else {
-        debug!("No proxy settings found.")
+        Err(ErrorKind::InvalidUrlFormat(raw.to_string()).into())
     }
+}
 
-    info!("Cloning remote git repository: {:?} into {:?}",
-          url,
-          clone_root.path());
-    let _ = repo.clone(url.as_ref(), &clone_root.path()).unwrap();
-
-    let mut project = Project::new_g8(None);
-    let mut template_root = ensure_inner_project(&clone_root.path());
-
-    let settings = template_root.join(format!("{}", project.config_format));
-    if let Ok(key_value) = fs::File::open(&settings).map(java_properties::read) {
-        println!("{:?}", key_value);
-    }
-
-    let walker = WalkDir::new(&template_root).into_iter();
-    for entry in walker.filter_entry(|e| !is_git_metadata(e)) {
-
-        let entry = entry.unwrap();
-
-        if entry.path() == &template_root {
-            debug!("skipping {:?}", entry.file_name());
-            continue;
-        }
-
-        let mut segment: Vec<&OsStr> = Vec::new();
-        let mut rel_path_up = entry.path().parent();
-        let mut upwards = 1;
-        while let Some(parent) = rel_path_up {
-            if upwards >= entry.depth() {
-                break;
-            } else {
-                segment.push(parent.file_name().unwrap_or("".as_ref()));
-            }
-            upwards += 1;
-            rel_path_up = parent.parent();
-        }
-
-        let mut dest = output_dir.clone();
-        if !segment.is_empty() {
-            segment.reverse();
-            for part in segment {
-                dest.push(part);
-            }
-        }
-        dest.push(entry.file_name());
-        debug!("{:?}", dest);
-
-        if !dry_run {
-            if entry.file_type().is_file() {
-                fs::copy(&entry.path(), dest.as_path()).expect("Failed to copy file");
-            } else if entry.file_type().is_dir() {
-                fs::create_dir(dest.as_path()).expect("Failed to copy directory");
-            }
+fn prompt(context: &mut HashMap<String, String>) -> &mut HashMap<String, String> {
+    let mut s = String::new();
+    for (k, v) in context.iter_mut() {
+        print!("{} [{}]:", k, v);
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut s).unwrap();
+        if !s.trim().is_empty() {
+            *v = s.trim().to_string();
+            s.clear();
         }
     }
+    context
+}
 
-    info!("done.");
+fn get_output_dir(arg_name: &Option<String>, default_name: &str) -> PathBuf {
+    let mut output_dir = env::current_dir().unwrap();
+    if let Some(ref name) = *arg_name {
+        let path = Path::new(name);
+        if path.is_relative() {
+            let normalized = format(name, Format::Normalize);
+            output_dir.push(&normalized);
+        } else if path.is_absolute() {
+            output_dir = path.to_path_buf();
+        }
+    } else {
+        output_dir.push(&format(default_name, Format::Normalize));
+    }
+
+    output_dir
 }

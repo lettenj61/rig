@@ -103,6 +103,7 @@ mod template_test {
 
     use std::collections::HashMap;
     use std::str;
+    use rig::format::Style;
     use rig::template::Template;
 
     #[test]
@@ -112,7 +113,7 @@ mod template_test {
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, "Hello, $name$!", ctx).unwrap();
+        Template::compile_inline(&mut out, Style::Simple, "Hello, $name$!", &ctx).unwrap();
         assert_eq!(str::from_utf8(&out).unwrap(), "Hello, Rust!");
     }
 
@@ -124,7 +125,7 @@ mod template_test {
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, "It's a $DOCUMENT_NAME;camel$", ctx).unwrap();
+        Template::compile_inline(&mut out, Style::Simple, "It's a $DOCUMENT_NAME;camel$", &ctx).unwrap();
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "It's a rustProgrammingLanguage".to_owned());
     }
@@ -137,7 +138,7 @@ mod template_test {
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, "It's a \\$DOCUMENT_NAME;camel$", ctx).unwrap();
+        Template::compile_inline(&mut out, Style::Simple, "It's a \\$DOCUMENT_NAME;camel$", &ctx).unwrap();
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "It's a \\$DOCUMENT_NAME;camel$".to_owned());
     }
@@ -152,7 +153,7 @@ mod template_test {
 
         let mut tpl =
             Template::new_g8(r#"trait $name;format="Camel"$[-A] extends js.Dictionary[A]"#);
-        tpl.write(&mut out, ctx).unwrap();
+        tpl.write(&mut out, &ctx).unwrap();
 
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "trait AwesomeDistributedInterface[-A] extends js.Dictionary[A]".to_owned());
@@ -174,6 +175,7 @@ mod repos_test {
         let mut p = td.into_path();
         p.push("such/file");
 
-        assert_eq!(format!("{:?}", p.file_name().unwrap()), r#""file""#.to_string());
+        assert_eq!(format!("{:?}", p.file_name().unwrap()),
+                   r#""file""#.to_string());
     }
 }
