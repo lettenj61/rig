@@ -9,7 +9,7 @@ so unimplemented features & bugs everywhere.
 
 I haven't published it to [Crates.io][cratesio], Cargo can download it via github repos.
 
-_NOTE_: You need `CMake` to be installed, as `cargo install` will build the binary from scratch.
+_NOTE_: You need to install `CMake` first, as `cargo install` will build the binary from scratch, and git2-rs (one of our dependency) need that.
 
 ```
 cargo install --git https://github.com/lettenj61/rig
