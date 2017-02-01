@@ -51,11 +51,7 @@ impl Default for Project {
 }
 
 impl Project {
-
-    pub fn new<S>(root: Option<S>,
-                  config_format: ConfigFormat,
-                  packaged: bool)
-                  -> Project
+    pub fn new<S>(root: Option<S>, config_format: ConfigFormat, packaged: bool) -> Project
         where S: AsRef<str>
     {
         Project {

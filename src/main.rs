@@ -110,9 +110,11 @@ fn main() {
 
     let project = match args.flag_giter8 {
         true => Project::new_g8(Some("src/main/g8")),
-        false => Project::new(args.flag_root.as_ref(),
-                              ConfigFormat::Toml, // TODO: parameterize config format
-                              args.flag_packaged),
+        false => {
+            Project::new(args.flag_root.as_ref(),
+                         ConfigFormat::Toml, // TODO: parameterize config format
+                         args.flag_packaged)
+        }
     };
 
     let mut params = project.default_params(&clone_root.path()).unwrap();

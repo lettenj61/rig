@@ -110,11 +110,10 @@ impl Template {
 /// Wrapper arround map-type collection to use as resolved parameters in project generation.
 #[derive(Debug, Clone)]
 pub struct Params {
-    pub param_map: HashMap<String, String>
+    pub param_map: HashMap<String, String>,
 }
 
 impl Params {
-
     pub fn from_map(map: HashMap<String, String>) -> Params {
         Params { param_map: map }
     }
@@ -142,7 +141,6 @@ fn convert(value: &Value) -> Option<String> {
         Value::Integer(_) => value.as_integer().map(|i| i.to_string()),
         Value::Float(_) => value.as_float().map(|f| f.to_string()),
         Value::Boolean(_) => value.as_bool().map(|b| b.to_string()),
-        _ => None
+        _ => None,
     }
 }
-

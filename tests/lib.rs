@@ -84,7 +84,7 @@ mod format_test {
         let ph = Placeholder::parse_simple("project_name;norm").unwrap();
         let mut params: HashMap<String, String> = HashMap::new();
         params.insert("project_name".to_owned(),
-                   "A si\nmPLe         p\trOj".to_owned());
+                      "A si\nmPLe         p\trOj".to_owned());
 
         assert_eq!(ph.format_with(&params), "a-si-mple-p-roj".to_owned());
     }
@@ -121,7 +121,7 @@ mod template_test {
     fn format_template() {
         let mut params: HashMap<String, String> = HashMap::new();
         params.insert("DOCUMENT_NAME".to_owned(),
-                   "RUST PROGRAMMING LANGUAGE".to_owned());
+                      "RUST PROGRAMMING LANGUAGE".to_owned());
 
         let mut out = Vec::new();
 
@@ -138,7 +138,7 @@ mod template_test {
     fn escape_character() {
         let mut params: HashMap<String, String> = HashMap::new();
         params.insert("DOCUMENT_NAME".to_owned(),
-                   "RUST PROGRAMMING LANGUAGE".to_owned());
+                      "RUST PROGRAMMING LANGUAGE".to_owned());
 
         let mut out = Vec::new();
 
@@ -155,7 +155,7 @@ mod template_test {
     fn giter8_template() {
         let mut params: HashMap<String, String> = HashMap::new();
         params.insert("name".to_owned(),
-                   "awesome distributed interface".to_owned());
+                      "awesome distributed interface".to_owned());
 
         let mut out = Vec::new();
 
