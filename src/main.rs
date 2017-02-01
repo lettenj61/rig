@@ -115,23 +115,23 @@ fn main() {
                               args.flag_packaged),
     };
 
-    let mut context = project.default_context(&clone_root.path()).unwrap();
-    debug!("Successfully read default context: {:?}", context);
+    let mut params = project.default_params(&clone_root.path()).unwrap();
+    debug!("Successfully read default context: {:?}", params);
 
     if !args.flag_confirm {
-        collect_params(&args.flag_name, &mut context);
-        debug!("Context updated with user input: {:?}", context);
+        collect_params(&args.flag_name, &mut params.param_map);
+        debug!("Context updated with user input: {:?}", params);
     }
 
     // ensure we have real path to output directory
-    let project_name = context.get("name")
+    let project_name = params.get("name")
         .cloned()
         .unwrap_or("Rig Generated Project".to_owned());
 
     let output_dir = get_output_dir(&args.flag_output, &project_name);
     debug!("Set output directory: {:?}", output_dir);
 
-    project.generate(&context, &clone_root.path(), &output_dir, args.flag_dry_run).unwrap();
+    project.generate(&params, &clone_root.path(), &output_dir, args.flag_dry_run).unwrap();
 
     println!("Project successfully generated: {:?}", &output_dir);
     drop(clone_root);
@@ -171,10 +171,10 @@ fn normalize_url(raw: &str) -> Result<Url> {
 }
 
 fn collect_params<'a>(name: &'a Option<String>,
-                      context: &'a mut HashMap<String, String>)
+                      params: &'a mut HashMap<String, String>)
                       -> &'a mut HashMap<String, String> {
     let mut s = String::new();
-    for (k, v) in context.iter_mut() {
+    for (k, v) in params.iter_mut() {
 
         // we treat `name` parameter specially
         if k == "name" {
@@ -192,7 +192,7 @@ fn collect_params<'a>(name: &'a Option<String>,
             s.clear();
         }
     }
-    context
+    params
 }
 
 fn get_output_dir(arg_name: &Option<String>, default_name: &str) -> PathBuf {

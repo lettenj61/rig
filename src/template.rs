@@ -3,6 +3,8 @@ use std::convert::From;
 use std::io::{self, Write};
 use std::path::Path;
 
+use toml::{Table, Value};
+
 use super::format::{Placeholder, Style};
 use super::fsutils;
 
@@ -36,17 +38,17 @@ impl Template {
     pub fn compile_inline<'a, S, W>(writer: &'a mut W,
                                     style: Style,
                                     template: S,
-                                    context: &HashMap<String, String>)
+                                    params: &HashMap<String, String>)
                                     -> Result<&'a mut W, io::Error>
         where S: AsRef<str>,
               W: Write
     {
         let mut template = Template::read_str(style, template);
-        Template::write(&mut template, writer, context)
+        Template::write(&mut template, writer, params)
     }
 
-    /// Replace all placeholders its holding with values from given context.
-    fn process(&self, ph: &str, context: &HashMap<String, String>) -> Option<String> {
+    /// Replace all placeholders its holding with values from given params.
+    fn process(&self, ph: &str, params: &HashMap<String, String>) -> Option<String> {
 
         let parsed = match self.style {
             Style::Simple => Placeholder::parse_simple(ph),
@@ -54,15 +56,15 @@ impl Template {
             Style::Pathname => Placeholder::parse_dirname(ph),
         };
 
-        // TODO: encode missing key in `context` with proper `Err`
+        // TODO: encode missing key in `params` with proper `Err`
         // TODO: return `Err` when parsing fails
-        parsed.map(|ph| ph.format_with(context)).ok()
+        parsed.map(|ph| ph.format_with(params)).ok()
     }
 
-    /// Process template with given `context`, and write result into `writer`.
+    /// Process template with given `params`, and write result into `writer`.
     pub fn write<'a, W: Write>(&mut self,
                                writer: &'a mut W,
-                               context: &HashMap<String, String>)
+                               params: &HashMap<String, String>)
                                -> Result<&'a mut W, io::Error> {
 
         let chars = self.body.as_bytes().into_iter();
@@ -78,7 +80,7 @@ impl Template {
                 try!(writer.write(&self.body[last_written..marker - 1].as_bytes()));
 
                 let ph = &self.body[marker..pos];
-                if let Some(value) = self.process(ph, context) {
+                if let Some(value) = self.process(ph, params) {
                     try!(writer.write(&value.as_bytes()));
                 } else {
                     try!(writer.write(&self.body[marker..pos].as_bytes()));
@@ -104,3 +106,43 @@ impl Template {
         Ok(writer)
     }
 }
+
+/// Wrapper arround map-type collection to use as resolved parameters in project generation.
+#[derive(Debug, Clone)]
+pub struct Params {
+    pub param_map: HashMap<String, String>
+}
+
+impl Params {
+
+    pub fn from_map(map: HashMap<String, String>) -> Params {
+        Params { param_map: map }
+    }
+
+    pub fn convert_toml(toml: &Table) -> Params {
+        let mut raw_values = HashMap::new();
+        for (k, tv) in toml {
+            if let Some(v) = convert(tv) {
+                raw_values.insert(k.clone(), v);
+            }
+        }
+        Params { param_map: raw_values }
+    }
+
+    pub fn get(&self, key: &str) -> Option<&String> {
+        self.param_map.get(key)
+    }
+}
+
+// FIXME: should return `Result<String, errors::Error>` to tell we won't accept table / array?
+fn convert(value: &Value) -> Option<String> {
+    match *value {
+        Value::String(_) => value.as_str().map(|s| s.to_owned()),
+        Value::Datetime(_) => value.as_datetime().map(|s| s.to_owned()),
+        Value::Integer(_) => value.as_integer().map(|i| i.to_string()),
+        Value::Float(_) => value.as_float().map(|f| f.to_string()),
+        Value::Boolean(_) => value.as_bool().map(|b| b.to_string()),
+        _ => None
+    }
+}
+

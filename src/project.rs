@@ -13,9 +13,7 @@ use walkdir::{DirEntry, WalkDir, WalkDirIterator};
 use super::errors::*;
 use super::format::Style;
 use super::fsutils;
-use super::template::Template;
-
-type Context = HashMap<String, String>;
+use super::template::{Params, Template};
 
 #[derive(Debug)]
 pub struct Project {
@@ -93,15 +91,15 @@ impl Project {
         buf
     }
 
-    pub fn default_context(&self, clone_root: &Path) -> Result<Context> {
+    pub fn default_params(&self, clone_root: &Path) -> Result<Params> {
         let root = self.resolve_root_dir(clone_root);
-        get_default_context(self, &root)
+        get_defaults(self, &root)
     }
 
     // TODO: give clear `Err` type
     // TODO: make it run async
     pub fn generate(&self,
-                    context: &Context,
+                    params: &Params,
                     clone_root: &Path,
                     dest: &Path,
                     dry_run: bool)
@@ -111,7 +109,7 @@ impl Project {
         let walker = WalkDir::new(&root).into_iter();
 
         let mut file_map: HashMap<OsString, String> = HashMap::new();
-        let default_ctx = root.join(format!("{}", &self.config_format));
+        let default_file = root.join(format!("{}", &self.config_format));
 
         if !dry_run {
             fs::create_dir_all(dest).unwrap();
@@ -120,7 +118,7 @@ impl Project {
         for entry in walker.filter_entry(|e| !is_git_metadata(e)) {
             let entry = entry.unwrap();
 
-            if entry.path() == &root || entry.path() == &default_ctx {
+            if entry.path() == &root || entry.path() == &default_file {
                 debug!("skipping {:?}", entry.file_name());
                 continue;
             }
@@ -158,10 +156,13 @@ impl Project {
                 Template::compile_inline(&mut buf,
                                          Style::Pathname,
                                          "$package__packaged$",
-                                         context)
-                                         .unwrap();
+                                         &params.param_map)
+                    .unwrap();
             } else {
-                Template::compile_inline(&mut buf, Style::Pathname, &base.to_string_lossy(), context)
+                Template::compile_inline(&mut buf,
+                                         Style::Pathname,
+                                         &base.to_string_lossy(),
+                                         &params.param_map)
                     .unwrap();
             }
 
@@ -183,7 +184,7 @@ impl Project {
                         .open(dest.as_path())
                         .unwrap();
 
-                    tpl.write(&mut f, context).unwrap();
+                    tpl.write(&mut f, &params.param_map).unwrap();
                     f.sync_data().unwrap();
                 } else if entry.file_type().is_dir() {
                     fs::create_dir_all(dest.as_path()).expect("Failed to copy directory");
@@ -201,18 +202,25 @@ fn is_git_metadata(entry: &DirEntry) -> bool {
     fsutils::is_directory(entry.path()) && is_git
 }
 
-fn get_default_context(project: &Project, root_dir: &Path) -> Result<Context> {
-    let default_ctx = root_dir.join(format!("{}", project.config_format));
+fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
+    let defaults_file = root_dir.join(format!("{}", project.config_format));
 
     match project.config_format {
         ConfigFormat::JavaProps => {
-            fs::File::open(&default_ctx)
-                .map(|f| java_properties::read(f).unwrap())
+            fs::File::open(&defaults_file)
+                .map(|f| {
+                    let props = java_properties::read(f).unwrap();
+                    Params::from_map(props)
+                })
                 .map_err(|e| ErrorKind::Io(e).into())
         }
         ConfigFormat::Toml => {
-            fsutils::read_file(&default_ctx)
-                .map(|s| toml::decode_str::<HashMap<String, String>>(&s).unwrap())
+            fsutils::read_file(&defaults_file)
+                .map(|s| {
+                    let mut parser = toml::Parser::new(&s);
+                    let tbl = parser.parse().unwrap();
+                    Params::convert_toml(&tbl)
+                })
                 .chain_err(|| ErrorKind::TomlDecodeFailure)
         }
     }
