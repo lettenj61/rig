@@ -46,6 +46,34 @@ Important is `<repository>` argument, which is a location of git repo contains t
 - `owner/project` style, like `lettenj61/rig`, which will expand to `https://github.com/lettenj61/rig`.
 - Proper URL locates git repository, currently supports only `https` scheme.
 
+The example output generating new project:
+
+```
+lettenj61:~/workspace $ rig unfiltered/unfiltered.g8 --giter8
+scala_version [2.12.1]:2.11.8
+unfiltered_version [maven(ws.unfiltered, unfiltered_2.12)]: 
+version [0.1.0-SNAPSHOT]:
+description [This template generates an Unfiltered project]:Some proj made with Rig
+name [My Web Project]:Awersome Unfiltered
+
+lettenj61:~/workspace $ tree ./awersome-unfiltered/
+./awersome-unfiltered/
+├── build.sbt
+└── src
+    ├── main
+    │   ├── resources
+    │   │   └── www
+    │   │       └── css
+    │   │           └── app.css
+    │   └── scala
+    │       └── Example.scala
+    └── test
+        └── scala
+            └── ExampleSpec.scala
+
+8 directories, 4 files
+```
+
 I'm working for more documentation, so please wait for a moment.
 
 ## License
