@@ -34,15 +34,17 @@ Usage:
 Options:
     -h, --help              Show help message
     -V, --version           Show version
+    -Y, --confirm           Use template default value to all parameters (Yes-To-All)
     --name NAME             Specify project name (overrides default if any)
     --output PATH           Specify output directory
-    --package PATH          Specify project directory tree (mainly used in giter8 project)
-    --verbatim EXTENSION    Space separeted list of file exts exclude from template processing
-    -Y, --confirm           Use template default value to all parameters (Yes-To-All)
-    --dry-run               Show generation process to STDOUT, without producing any files
     --giter8                Expects that the template is a giter8 template
-    --no-logo               Supress logo
 ```
+
+Important is `<repository>` argument, which is a location of git repo contains template.
+
+`<repository>` should be one of the formats:
+- `owner/project` style, like `lettenj61/rig`, which will expand to `https://github.com/lettenj61/rig`.
+- Proper URL locates git repository, currently supports only `https` scheme.
 
 I'm working for more documentation, so please wait for a moment.
 
