@@ -13,7 +13,6 @@ extern crate rig;
 
 use std::collections::HashMap;
 use std::env;
-use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
@@ -26,8 +25,7 @@ use url::Url;
 
 use rig::errors::*;
 use rig::format::{format, Format};
-use rig::fsutils;
-use rig::project::{ConfigFormat, Project};
+use rig::project::Project;
 
 const USAGE: &'static str = r#"
 Rig - Generate new project by cloning templates from git repository.
