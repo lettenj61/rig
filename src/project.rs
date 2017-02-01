@@ -34,10 +34,10 @@ pub enum ConfigFormat {
 impl fmt::Display for ConfigFormat {
     fn fmt(&self, f: &mut fmt::Formatter) -> StdResult<(), fmt::Error> {
         let name = match *self {
-            ConfigFormat::JavaProps => "properties",
-            ConfigFormat::Toml => "toml",
+            ConfigFormat::JavaProps => "default.properties",
+            ConfigFormat::Toml => "_rig.toml",
         };
-        write!(f, "default.{}", &name)
+        write!(f, "{}", &name)
     }
 }
 
