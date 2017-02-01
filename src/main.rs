@@ -25,13 +25,14 @@ use url::Url;
 
 use rig::errors::*;
 use rig::format::{format, Format};
-use rig::project::Project;
+use rig::project::{ConfigFormat, Project};
 
 const USAGE: &'static str = r#"
 Rig - Generate new project by cloning templates from git repository.
+
 *NOTE* This software is under early development, most of its features are not yet supported:
   - Currently it can only use templates that hosted on GitHub
-  - giter8 compatibility features (e.g. maven directive) are not implemented.
+  - giter8 compatibility features (e.g. maven directive) are not yet supported.
 
 Usage:
     rig <repository> [options]
@@ -42,9 +43,10 @@ Options:
     -h, --help              Show help message
     -V, --version           Show version
     --name NAME             Specify project name (overrides default if any)
-    --output PATH           Specify output directory
-    --packaged              Force format `package` parameter value into directory tree
+    --output PATH           Specify output directory to generate project
+    --root PATH             Specify directory where template lives in repository
     --verbatim EXTENSION    Space separeted list of file exts exclude from template processing
+    -p, --packaged          Force format `package` parameter value into directory tree
     -Y, --confirm           Use template default value to all parameters (Yes-To-All)
     --dry-run               Show generation process to STDOUT, without producing any files
     --giter8                Expects that the template is a giter8 template
@@ -56,6 +58,7 @@ struct Args {
     arg_repository: String,
     flag_name: Option<String>,
     flag_output: Option<String>,
+    flag_root: Option<String>,
     flag_verbatim: Option<String>, // unimplemented!
     flag_packaged: bool,
     flag_confirm: bool,
@@ -107,7 +110,9 @@ fn main() {
 
     let project = match args.flag_giter8 {
         true => Project::new_g8(Some("src/main/g8")),
-        false => Default::default(),
+        false => Project::new(args.flag_root.as_ref(),
+                              ConfigFormat::Toml, // TODO: parameterize config format
+                              args.flag_packaged),
     };
 
     let mut context = project.default_context(&clone_root.path()).unwrap();
@@ -128,7 +133,7 @@ fn main() {
 
     project.generate(&context, &clone_root.path(), &output_dir, args.flag_dry_run).unwrap();
 
-    info!("done.");
+    println!("Project successfully generated: {:?}", &output_dir);
     drop(clone_root);
 }
 

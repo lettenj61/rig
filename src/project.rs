@@ -22,6 +22,7 @@ pub struct Project {
     pub root_path: Option<String>,
     pub config_format: ConfigFormat,
     pub style: Style,
+    pub force_packaged: bool,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -46,16 +47,33 @@ impl Default for Project {
             root_path: None,
             config_format: ConfigFormat::Toml,
             style: Style::Simple,
+            force_packaged: false,
         }
     }
 }
 
 impl Project {
+
+    pub fn new<S>(root: Option<S>,
+                  config_format: ConfigFormat,
+                  packaged: bool)
+                  -> Project
+        where S: AsRef<str>
+    {
+        Project {
+            root_path: root.map(|v| v.as_ref().to_owned()),
+            config_format: config_format,
+            style: Style::Simple,
+            force_packaged: packaged,
+        }
+    }
+
     pub fn new_g8(root: Option<&str>) -> Project {
         Project {
             root_path: root.map(|v| v.to_string()),
             config_format: ConfigFormat::JavaProps,
             style: Style::Giter8,
+            force_packaged: true,
         }
     }
 
@@ -135,8 +153,17 @@ impl Project {
             }
 
             let mut buf = Vec::new();
-            Template::compile_inline(&mut buf, Style::Pathname, &base.to_string_lossy(), context)
-                .unwrap();
+            // FIXME: we need to re-design `Template` so we can manipulate its elements
+            if "$package$" == base.to_string_lossy().as_ref() && self.force_packaged {
+                Template::compile_inline(&mut buf,
+                                         Style::Pathname,
+                                         "$package__packaged$",
+                                         context)
+                                         .unwrap();
+            } else {
+                Template::compile_inline(&mut buf, Style::Pathname, &base.to_string_lossy(), context)
+                    .unwrap();
+            }
 
             let name = String::from_utf8(buf).unwrap();
             if &name != base.to_string_lossy().as_ref() {
@@ -158,7 +185,6 @@ impl Project {
 
                     tpl.write(&mut f, context).unwrap();
                     f.sync_data().unwrap();
-                    // fs::copy(&entry.path(), dest.as_path()).expect("Failed to copy file");
                 } else if entry.file_type().is_dir() {
                     fs::create_dir_all(dest.as_path()).expect("Failed to copy directory");
                 }
