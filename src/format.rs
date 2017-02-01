@@ -1,5 +1,5 @@
-use std::ascii::AsciiExt;
 use std::collections::HashMap;
+use std::ascii::AsciiExt;
 use std::convert::From;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -125,8 +125,8 @@ impl Placeholder {
     }
 
     /// Apply formatting on the placeholder with given context, and returns formatted `String`.
-    pub fn format_with(&self, context: &HashMap<String, String>) -> String {
-        if let Some(v) = context.get(&self.key) {
+    pub fn format_with(&self, params: &HashMap<String, String>) -> String {
+        if let Some(v) = params.get(&self.key) {
             self.args.iter().fold(v.clone(), |ref s, f| format(&s, *f))
         } else {
             self.key.clone()
@@ -235,9 +235,4 @@ pub fn format(s: &str, f: Format) -> String {
         Format::DirectoryPath => directory_path(s),
         _ => s.into(),
     }
-}
-
-pub fn is_placeholder<S: AsRef<str>>(s: S) -> bool {
-    let s = s.as_ref();
-    s.starts_with("$") && s.ends_with("$")
 }

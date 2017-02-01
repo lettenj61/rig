@@ -25,13 +25,14 @@ use url::Url;
 
 use rig::errors::*;
 use rig::format::{format, Format};
-use rig::project::Project;
+use rig::project::{ConfigFormat, Project};
 
 const USAGE: &'static str = r#"
 Rig - Generate new project by cloning templates from git repository.
+
 *NOTE* This software is under early development, most of its features are not yet supported:
   - Currently it can only use templates that hosted on GitHub
-  - giter8 compatibility features (e.g. maven directive) are not implemented.
+  - giter8 compatibility features (e.g. maven directive) are not yet supported.
 
 Usage:
     rig <repository> [options]
@@ -42,9 +43,10 @@ Options:
     -h, --help              Show help message
     -V, --version           Show version
     --name NAME             Specify project name (overrides default if any)
-    --output PATH           Specify output directory
-    --package PATH          Specify project directory tree (mainly used in giter8 project)
+    --output PATH           Specify output directory to generate project
+    --root PATH             Specify directory where template lives in repository
     --verbatim EXTENSION    Space separeted list of file exts exclude from template processing
+    -p, --packaged          Force format `package` parameter value into directory tree
     -Y, --confirm           Use template default value to all parameters (Yes-To-All)
     --dry-run               Show generation process to STDOUT, without producing any files
     --giter8                Expects that the template is a giter8 template
@@ -56,8 +58,9 @@ struct Args {
     arg_repository: String,
     flag_name: Option<String>,
     flag_output: Option<String>,
-    flag_package: Option<String>,
-    flag_verbatim: Option<String>,
+    flag_root: Option<String>,
+    flag_verbatim: Option<String>, // unimplemented!
+    flag_packaged: bool,
     flag_confirm: bool,
     flag_giter8: bool,
     flag_dry_run: bool,
@@ -107,28 +110,32 @@ fn main() {
 
     let project = match args.flag_giter8 {
         true => Project::new_g8(Some("src/main/g8")),
-        false => Default::default(),
+        false => {
+            Project::new(args.flag_root.as_ref(),
+                         ConfigFormat::Toml, // TODO: parameterize config format
+                         args.flag_packaged)
+        }
     };
 
-    let mut context = project.default_context(&clone_root.path()).unwrap();
-    debug!("Successfully read default context: {:?}", context);
+    let mut params = project.default_params(&clone_root.path()).unwrap();
+    debug!("Successfully read default context: {:?}", params);
 
     if !args.flag_confirm {
-        prompt(&mut context);
-        debug!("Context updated with user input: {:?}", context);
+        collect_params(&args.flag_name, &mut params.param_map);
+        debug!("Context updated with user input: {:?}", params);
     }
 
     // ensure we have real path to output directory
-    let project_name = context.get("name")
+    let project_name = params.get("name")
         .cloned()
         .unwrap_or("Rig Generated Project".to_owned());
 
     let output_dir = get_output_dir(&args.flag_output, &project_name);
     debug!("Set output directory: {:?}", output_dir);
 
-    project.generate(&context, &clone_root.path(), &output_dir, args.flag_dry_run).unwrap();
+    project.generate(&params, &clone_root.path(), &output_dir, args.flag_dry_run).unwrap();
 
-    info!("done.");
+    println!("Project successfully generated: {:?}", &output_dir);
     drop(clone_root);
 }
 
@@ -165,9 +172,20 @@ fn normalize_url(raw: &str) -> Result<Url> {
     }
 }
 
-fn prompt(context: &mut HashMap<String, String>) -> &mut HashMap<String, String> {
+fn collect_params<'a>(name: &'a Option<String>,
+                      params: &'a mut HashMap<String, String>)
+                      -> &'a mut HashMap<String, String> {
     let mut s = String::new();
-    for (k, v) in context.iter_mut() {
+    for (k, v) in params.iter_mut() {
+
+        // we treat `name` parameter specially
+        if k == "name" {
+            if let Some(ref arg_name) = *name {
+                *v = arg_name.clone();
+                continue;
+            }
+        }
+
         print!("{} [{}]:", k, v);
         io::stdout().flush().unwrap();
         io::stdin().read_line(&mut s).unwrap();
@@ -176,7 +194,7 @@ fn prompt(context: &mut HashMap<String, String>) -> &mut HashMap<String, String>
             s.clear();
         }
     }
-    context
+    params
 }
 
 fn get_output_dir(arg_name: &Option<String>, default_name: &str) -> PathBuf {

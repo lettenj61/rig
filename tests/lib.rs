@@ -73,29 +73,29 @@ mod format_test {
     #[test]
     fn placeholder_giter8() {
         let ph = Placeholder::parse_g8(r#"project_name;format="upper,hyphen""#).unwrap();
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("project_name".to_owned(), "A simple proj".to_owned());
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("project_name".to_owned(), "A simple proj".to_owned());
 
-        assert_eq!(ph.format_with(&ctx), "A-SIMPLE-PROJ".to_owned());
+        assert_eq!(ph.format_with(&params), "A-SIMPLE-PROJ".to_owned());
     }
 
     #[test]
     fn placeholder_simple() {
         let ph = Placeholder::parse_simple("project_name;norm").unwrap();
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("project_name".to_owned(),
-                   "A si\nmPLe         p\trOj".to_owned());
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("project_name".to_owned(),
+                      "A si\nmPLe         p\trOj".to_owned());
 
-        assert_eq!(ph.format_with(&ctx), "a-si-mple-p-roj".to_owned());
+        assert_eq!(ph.format_with(&params), "a-si-mple-p-roj".to_owned());
     }
 
     #[test]
     fn placeholder_dirname() {
         let ph = Placeholder::parse_dirname("twitter_id__word_cap").unwrap();
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("twitter_id".to_owned(), "bar3s%Ye".to_owned());
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("twitter_id".to_owned(), "bar3s%Ye".to_owned());
 
-        assert_eq!(ph.format_with(&ctx), "Bar3sye".to_owned());
+        assert_eq!(ph.format_with(&params), "Bar3sye".to_owned());
     }
 }
 
@@ -104,56 +104,64 @@ mod template_test {
     use std::collections::HashMap;
     use std::str;
     use rig::format::Style;
-    use rig::template::Template;
+    use rig::template::{Params, Template};
 
     #[test]
     fn compile_inline() {
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("name".to_owned(), "Rust".to_owned());
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("name".to_owned(), "Rust".to_owned());
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, Style::Simple, "Hello, $name$!", &ctx).unwrap();
+        Template::compile_inline(&mut out, Style::Simple, "Hello, $name$!", &params).unwrap();
         assert_eq!(str::from_utf8(&out).unwrap(), "Hello, Rust!");
     }
 
     #[test]
     fn format_template() {
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("DOCUMENT_NAME".to_owned(),
-                   "RUST PROGRAMMING LANGUAGE".to_owned());
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("DOCUMENT_NAME".to_owned(),
+                      "RUST PROGRAMMING LANGUAGE".to_owned());
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, Style::Simple, "It's a $DOCUMENT_NAME;camel$", &ctx).unwrap();
+        Template::compile_inline(&mut out,
+                                 Style::Simple,
+                                 "It's a $DOCUMENT_NAME;camel$",
+                                 &params)
+            .unwrap();
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "It's a rustProgrammingLanguage".to_owned());
     }
 
     #[test]
     fn escape_character() {
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("DOCUMENT_NAME".to_owned(),
-                   "RUST PROGRAMMING LANGUAGE".to_owned());
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("DOCUMENT_NAME".to_owned(),
+                      "RUST PROGRAMMING LANGUAGE".to_owned());
 
         let mut out = Vec::new();
 
-        Template::compile_inline(&mut out, Style::Simple, "It's a \\$DOCUMENT_NAME;camel$", &ctx).unwrap();
+        Template::compile_inline(&mut out,
+                                 Style::Simple,
+                                 "It's a \\$DOCUMENT_NAME;camel$",
+                                 &params)
+            .unwrap();
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "It's a \\$DOCUMENT_NAME;camel$".to_owned());
     }
 
     #[test]
     fn giter8_template() {
-        let mut ctx: HashMap<String, String> = HashMap::new();
-        ctx.insert("name".to_owned(),
-                   "awesome distributed interface".to_owned());
+        let mut params: HashMap<String, String> = HashMap::new();
+        params.insert("name".to_owned(),
+                      "awesome distributed interface".to_owned());
 
         let mut out = Vec::new();
 
         let mut tpl =
             Template::new_g8(r#"trait $name;format="Camel"$[-A] extends js.Dictionary[A]"#);
-        tpl.write(&mut out, &ctx).unwrap();
+        tpl.write(&mut out, &params).unwrap();
 
         assert_eq!(str::from_utf8(&out).unwrap(),
                    "trait AwesomeDistributedInterface[-A] extends js.Dictionary[A]".to_owned());
