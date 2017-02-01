@@ -114,7 +114,7 @@ fn main() {
     debug!("Successfully read default context: {:?}", context);
 
     if !args.flag_confirm {
-        prompt(&mut context);
+        collect_params(&args.flag_name, &mut context);
         debug!("Context updated with user input: {:?}", context);
     }
 
@@ -165,9 +165,18 @@ fn normalize_url(raw: &str) -> Result<Url> {
     }
 }
 
-fn prompt(context: &mut HashMap<String, String>) -> &mut HashMap<String, String> {
+fn collect_params<'a>(name: &'a Option<String>, context: &'a mut HashMap<String, String>) -> &'a mut HashMap<String, String> {
     let mut s = String::new();
     for (k, v) in context.iter_mut() {
+
+        // we treat `name` parameter specially
+        if k == "name" {
+            if let Some(ref arg_name) = *name {
+                *v = arg_name.clone();
+                continue;
+            }
+        }
+
         print!("{} [{}]:", k, v);
         io::stdout().flush().unwrap();
         io::stdin().read_line(&mut s).unwrap();
