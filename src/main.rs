@@ -165,7 +165,9 @@ fn normalize_url(raw: &str) -> Result<Url> {
     }
 }
 
-fn collect_params<'a>(name: &'a Option<String>, context: &'a mut HashMap<String, String>) -> &'a mut HashMap<String, String> {
+fn collect_params<'a>(name: &'a Option<String>,
+                      context: &'a mut HashMap<String, String>)
+                      -> &'a mut HashMap<String, String> {
     let mut s = String::new();
     for (k, v) in context.iter_mut() {
 

@@ -135,11 +135,8 @@ impl Project {
             }
 
             let mut buf = Vec::new();
-            Template::compile_inline(&mut buf,
-                                     Style::Pathname,
-                                     &base.to_string_lossy(),
-                                     context)
-                                     .unwrap();
+            Template::compile_inline(&mut buf, Style::Pathname, &base.to_string_lossy(), context)
+                .unwrap();
 
             let name = String::from_utf8(buf).unwrap();
             if &name != base.to_string_lossy().as_ref() {
