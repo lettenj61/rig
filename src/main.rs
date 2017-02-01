@@ -43,7 +43,7 @@ Options:
     -V, --version           Show version
     --name NAME             Specify project name (overrides default if any)
     --output PATH           Specify output directory
-    --package PATH          Specify project directory tree (mainly used in giter8 project)
+    --packaged              Force format `package` parameter value into directory tree
     --verbatim EXTENSION    Space separeted list of file exts exclude from template processing
     -Y, --confirm           Use template default value to all parameters (Yes-To-All)
     --dry-run               Show generation process to STDOUT, without producing any files
@@ -56,8 +56,8 @@ struct Args {
     arg_repository: String,
     flag_name: Option<String>,
     flag_output: Option<String>,
-    flag_package: Option<String>,
-    flag_verbatim: Option<String>,
+    flag_verbatim: Option<String>, // unimplemented!
+    flag_packaged: bool,
     flag_confirm: bool,
     flag_giter8: bool,
     flag_dry_run: bool,
