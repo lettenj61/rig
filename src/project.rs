@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -92,7 +92,7 @@ impl Project {
         let root = self.resolve_root_dir(clone_root);
         let walker = WalkDir::new(&root).into_iter();
 
-        let mut file_map: HashMap<String, String> = HashMap::new();
+        let mut file_map: HashMap<OsString, String> = HashMap::new();
         let default_ctx = root.join(format!("{}", &self.config_format));
 
         if !dry_run {
@@ -120,13 +120,13 @@ impl Project {
                 rel_path_up = parent.parent();
             }
 
-            let base = entry.file_name().to_string_lossy().to_string();
+            let base = entry.file_name();
             let mut dest = dest.to_path_buf();
             if !segment.is_empty() {
                 segment.reverse();
                 for part in segment {
-                    if let Some(rep) = file_map.get(&part.to_string_lossy().to_string()) {
-                        debug!("File tree altered: {:?} => {:?}", &part, rep);
+                    if let Some(rep) = file_map.get(part) {
+                        debug!("File tree altered: {:?} => {:?}", part, rep);
                         dest.push(rep);
                     } else {
                         dest.push(part);
@@ -134,19 +134,18 @@ impl Project {
                 }
             }
 
-            
-            let mut writer = Vec::new();
-            Template::compile_inline(&mut writer,
+            let mut buf = Vec::new();
+            Template::compile_inline(&mut buf,
                                      Style::Pathname,
-                                     &base,
+                                     &base.to_string_lossy(),
                                      context)
                                      .unwrap();
 
-            let name = str::from_utf8(&writer).unwrap();
-            if name != &base {
-                file_map.insert(base.clone(), name.to_string());
+            let name = String::from_utf8(buf).unwrap();
+            if &name != base.to_string_lossy().as_ref() {
+                file_map.insert(base.to_os_string(), name.clone());
             }
-            dest.push(name);
+            dest.push(&name);
             debug!("Destination entry: {:?}", dest);
 
             // TODO:
