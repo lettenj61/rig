@@ -12,7 +12,7 @@ I haven't published it to [Crates.io][cratesio], Cargo can download it via githu
 _NOTE_: You need `CMake` to be installed, as `cargo install` will build the binary from scratch.
 
 ```
-cargo install --git cargo install --git https://github.com/lettenj61/rig
+cargo install --git https://github.com/lettenj61/rig
 ```
 
 ## Usage
