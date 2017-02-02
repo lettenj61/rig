@@ -104,7 +104,7 @@ mod template_test {
     use std::collections::HashMap;
     use std::str;
     use rig::format::Style;
-    use rig::template::{Params, Template};
+    use rig::template::Template;
 
     #[test]
     fn compile_inline() {
@@ -168,22 +168,110 @@ mod template_test {
     }
 }
 
-mod repos_test {
+mod project_test {
 
     extern crate tempdir;
+    use std::fs;
 
-    use std::ffi;
-    use std::path::Path;
-    use self::tempdir::TempDir;
+    use rig::fsutils;
+    use rig::project::{ConfigFormat, Project};
+
+    const G8_PROPS: &'static str = r#"
+        name = value1
+        bar = baz!
+        package = com.example.me
+    "#;
+
+    const TOML: &'static str = r#"
+        name = "My Project"
+        package = "deep.pkg.path"
+        will_be_ignored = [4, 5, 6, 7]
+        module_name = "quux"
+    "#;
 
     #[test]
-    fn path_sep() {
+    fn simple_project() {
 
-        let td = TempDir::new("sample-run").unwrap();
-        let mut p = td.into_path();
-        p.push("such/file");
+        let rust_dirs = vec![
+            "src/sample",
+            "src/sample/$package$",
+            "ci"
+        ];
 
-        assert_eq!(format!("{:?}", p.file_name().unwrap()),
-                   r#""file""#.to_string());
+        let src = tempdir::TempDir::new("rig-simple-test").unwrap();
+        let src = src.path();
+        for dir in &rust_dirs {
+            let dir = src.join(dir);
+            fs::create_dir_all(dir).unwrap();
+        }
+
+        let toml = src.join("_rig.toml");
+        fsutils::write_file(&toml, TOML).unwrap();
+        assert!(fsutils::exists(&toml));
+
+        let dest = tempdir::TempDir::new("generated-proj").unwrap();
+        let dest = dest.path();
+
+        let project = Project::new(None as Option<&str>, ConfigFormat::Toml, false);
+        let params = project.default_params(&src).unwrap();
+        assert_eq!(params.get("name"), Some(&"My Project".to_owned()));
+        assert_eq!(params.get("module_name"), Some(&"quux".to_owned()));
+        assert!(params.get("will_be_ignored").is_none());
+
+        project.generate(&params, &src, &dest, false).unwrap();
+
+        let expected = vec![
+            "ci",
+            "src/sample",
+            "src/sample/deep.pkg.path"
+        ];
+
+        for goal in &expected {
+            let goal = &dest.join(goal);
+            assert!(fsutils::exists(&goal));
+        }
+    }
+
+    #[test]
+    fn giter8_project() {
+
+        let g8_dirs = vec![
+            "src/main/g8",
+            "src/main/g8/project",
+            "src/main/g8/src/main/scala/$package$"
+        ];
+
+        let src = tempdir::TempDir::new("rig-g8-test").unwrap();
+        let src = src.path();
+        for dir in &g8_dirs {
+            let dir = src.join(dir);
+            fs::create_dir_all(dir).unwrap();
+        }
+
+        let props = src.join("src/main/g8/default.properties");
+        fsutils::write_file(&props, G8_PROPS).unwrap();
+        assert!(fsutils::exists(&props));
+
+        let dest = tempdir::TempDir::new("generated-proj").unwrap();
+        let dest = dest.path();
+
+        let project = Project::new_g8(Some("src/main/g8"));
+
+        let params = project.default_params(&src).unwrap();
+        assert_eq!(params.get("name"), Some(&"value1".to_owned()));
+
+        project.generate(&params, &src, &dest, false).unwrap();
+
+        let expected = vec![
+            "project",
+            "src/main/scala/com",
+            "src/main/scala/com/example",
+            "src/main/scala/com/example/me",
+        ];
+
+        for goal in &expected {
+            let goal = &dest.join(goal);
+            assert!(fsutils::exists(&goal));
+        }
     }
 }
