@@ -168,22 +168,7 @@ mod template_test {
     }
 }
 
-mod repos_test {
+mod project_test {
 
-    extern crate tempdir;
-
-    use std::ffi;
-    use std::path::Path;
-    use self::tempdir::TempDir;
-
-    #[test]
-    fn path_sep() {
-
-        let td = TempDir::new("sample-run").unwrap();
-        let mut p = td.into_path();
-        p.push("such/file");
-
-        assert_eq!(format!("{:?}", p.file_name().unwrap()),
-                   r#""file""#.to_string());
-    }
+    // TODO:
 }
