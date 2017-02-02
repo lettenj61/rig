@@ -1,15 +1,15 @@
 # Rig
 
-A toolkit to generate new project from templates hosted in git repository. Mostly a port to Scala's [giter8][g8]
+A tool to generate new project from templates hosted in git repository, is mostly a port to Scala's [giter8][g8]
 
 __IMPORTANT__ Currently this tool is under early development stage, and not all the tests provided,
 so unimplemented features & bugs everywhere.
 
 ## Installation
 
-I haven't published it to [Crates.io][cratesio], Cargo can download it via github repos.
+I haven't published it to [Crates.io][cratesio], anyway Cargo can download it from github repo.
 
-_NOTE_: You need to install `CMake` first, as `cargo install` will build the binary from scratch, and git2-rs (one of our dependency) need that.
+_NOTE_: You need to install `CMake` first, as `cargo install` will build the binary from scratch, and git2-rs (one of our dependency) needs that.
 
 ```
 cargo install --git https://github.com/lettenj61/rig
@@ -17,7 +17,7 @@ cargo install --git https://github.com/lettenj61/rig
 
 ## Usage
 
-Successfully installed, this usage text spams your console when you hit `rig -h`
+If installed successfully, this usage text spams your console when you hit `rig -h`
 
 ```
 Rig - Generate new project by cloning templates from git repository.
@@ -40,11 +40,11 @@ Options:
     --giter8                Expects that the template is a giter8 template
 ```
 
-Important is `<repository>` argument, which is a location of git repo contains template.
+Important thing is `<repository>` argument, which locates the git repo contains template.
 
-`<repository>` should be one of the formats:
-- `owner/project` style, like `lettenj61/rig`, which will expand to `https://github.com/lettenj61/rig`.
-- Proper URL locates git repository, currently supports only `https` scheme.
+`<repository>` should be one of these formats:
+- `owner/project` format, like `lettenj61/rig`, which will be expanded to `https://github.com/lettenj61/rig`.
+- Valid URL of git repository, currently supports only `https` scheme.
 
 The example output generating new project:
 
@@ -77,7 +77,7 @@ lettenj61:~/workspace $ tree ./awersome-unfiltered/
 I'm working for more documentation, so please wait for a moment.
 
 ## License
-The software is dual-licensed under Apache license and MIT license, see LICENSE-Apache and LICENSE-MIT for details.
+The software is dual-licensed under Apache license and MIT license, see LICENSE-APACHE and LICENSE-MIT for details.
 
 
 <!-- links -->
