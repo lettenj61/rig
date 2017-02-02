@@ -11,4 +11,11 @@ script:
   - cargo test --verbose
 
 notifications:
-email: false
+  email: false
+
+addons:
+  apt:
+    sources:
+      - kalakris-cmake
+    packages:
+      - cmake
