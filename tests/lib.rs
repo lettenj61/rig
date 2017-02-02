@@ -170,5 +170,66 @@ mod template_test {
 
 mod project_test {
 
-    // TODO:
+    extern crate tempdir;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+
+    use rig::fsutils;
+    use rig::project::Project;
+
+    const G8_PROPS: &'static str = r#"
+        name = value1
+        bar = baz!
+        package = com.example.me
+    "#;
+
+    const TOML: &'static str = r#"
+        name = "My Project"
+        package = "deep.pkg.path"
+        will_be_ignored = [4, 5, 6, 7]
+        module_name = "quux"
+    "#;
+
+    #[test]
+    fn giter8_project() {
+
+        let g8_dirs = vec![
+            "src/main/g8",
+            "src/main/g8/project",
+            "src/main/g8/src/main/scala/$package$"
+        ];
+
+        let src = tempdir::TempDir::new("rig-g8-test").unwrap();
+        let src = src.path();
+        for dir in &g8_dirs {
+            let dir = src.join(dir);
+            fs::create_dir_all(dir).unwrap();
+        }
+
+        let props = src.join("src/main/g8/default.properties");
+        fsutils::write_file(&props, G8_PROPS).unwrap();
+        assert!(fsutils::exists(&props));
+
+        let dest = tempdir::TempDir::new("generated-proj").unwrap();
+        let dest = dest.path();
+
+        let project = Project::new_g8(Some("src/main/g8"));
+
+        let params = project.default_params(&src).unwrap();
+        assert_eq!(params.get("name"), Some(&"value1".to_owned()));
+
+        project.generate(&params, &src, &dest, false).unwrap();
+
+        let expected = vec![
+            "project",
+            "src/main/scala/com",
+            "src/main/scala/com/example",
+            "src/main/scala/com/example/me",
+        ];
+
+        for goal in &expected {
+            let goal = &dest.join(goal);
+            assert!(fsutils::exists(&goal));
+        }
+    }
 }
