@@ -2,6 +2,8 @@
 
 A tool to generate new project from templates hosted in git repository, is mostly a port to Scala's [giter8][g8]
 
+[![Build Status](https://travis-ci.org/lettenj61/rig.svg?branch=master)](https://travis-ci.org/lettenj61/rig)
+
 __IMPORTANT__ Currently this tool is under early development stage, and not all the tests provided,
 so unimplemented features & bugs everywhere.
 
