@@ -49,29 +49,27 @@ Important thing is `<repository>` argument, which locates the git repo contains 
 The example output generating new project:
 
 ```
-lettenj61:~/workspace $ rig unfiltered/unfiltered.g8 --giter8
-scala_version [2.12.1]:2.11.8
-unfiltered_version [maven(ws.unfiltered, unfiltered_2.12)]: 
-version [0.1.0-SNAPSHOT]:
-description [This template generates an Unfiltered project]:Some proj made with Rig
-name [My Web Project]:Awersome Unfiltered
-
-lettenj61:~/workspace $ tree ./awersome-unfiltered/
-./awersome-unfiltered/
-├── build.sbt
+lettenj61:~/sandbox $ rig typesafehub/scala-sbt.g8 --giter8
+description [Scala Project Using sbt]:Some project made with Rig
+name [Scala Project]:My First Project
+version [0.1-SNAPSHOT]:0.1.0
+scala_version [2.10.2]:2.11.8
+organization [org.example]:com.github.myself
+Project successfully generated: "/home/ubuntu/sandbox/my-first-project"
+lettenj61:~/sandbox $ tree ./my-first-project/
+./my-first-project/
+├── README
+├── project
+│   └── MyFirstProjectBuild.scala
 └── src
-    ├── main
-    │   ├── resources
-    │   │   └── www
-    │   │       └── css
-    │   │           └── app.css
-    │   └── scala
-    │       └── Example.scala
-    └── test
+    └── main
         └── scala
-            └── ExampleSpec.scala
+            └── com
+                └── github
+                    └── myself
+                        └── MyFirstProject.scala
 
-8 directories, 4 files
+7 directories, 3 files
 ```
 
 I'm working for more documentation, so please wait for a moment.
