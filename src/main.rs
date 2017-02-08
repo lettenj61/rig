@@ -24,7 +24,7 @@ use tempdir::TempDir;
 use url::Url;
 
 use rig::errors::*;
-use rig::format::{format, Format};
+use rig::format::{format, Formatter};
 use rig::project::{ConfigFormat, Project};
 
 const USAGE: &'static str = r#"
@@ -202,13 +202,13 @@ fn get_output_dir(arg_name: &Option<String>, default_name: &str) -> PathBuf {
     if let Some(ref name) = *arg_name {
         let path = Path::new(name);
         if path.is_relative() {
-            let normalized = format(name, Format::Normalize);
+            let normalized = format(name, Formatter::Normalize);
             output_dir.push(&normalized);
         } else if path.is_absolute() {
             output_dir = path.to_path_buf();
         }
     } else {
-        output_dir.push(&format(default_name, Format::Normalize));
+        output_dir.push(&format(default_name, Formatter::Normalize));
     }
 
     output_dir

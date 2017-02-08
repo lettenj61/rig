@@ -1,5 +1,6 @@
 #![recursion_limit = "1024"]
 
+extern crate combine;
 extern crate env_logger;
 #[macro_use]
 extern crate error_chain;
@@ -16,5 +17,6 @@ extern crate walkdir;
 pub mod errors;
 pub mod format;
 pub mod fsutils;
+pub mod parser;
 pub mod project;
 pub mod template;
