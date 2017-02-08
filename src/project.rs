@@ -9,9 +9,8 @@ use toml;
 use walkdir::{DirEntry, WalkDir, WalkDirIterator};
 
 use super::errors::*;
-use super::format::Style;
 use super::fsutils;
-use super::template::{Params, Template};
+use super::template::{Placeholder, Style, Params, Template};
 
 #[derive(Debug)]
 pub struct Project {
@@ -32,7 +31,7 @@ impl Default for Project {
         Project {
             root_path: None,
             config_format: ConfigFormat::Toml,
-            style: Style::Simple,
+            style: Style::Tera,
             force_packaged: false,
         }
     }
@@ -45,7 +44,7 @@ impl Project {
         Project {
             root_path: root.map(|v| v.as_ref().to_owned()),
             config_format: config_format,
-            style: Style::Simple,
+            style: Style::Tera,
             force_packaged: packaged,
         }
     }
@@ -54,7 +53,7 @@ impl Project {
         Project {
             root_path: root.map(|v| v.to_string()),
             config_format: ConfigFormat::JavaProps,
-            style: Style::Giter8,
+            style: Style::ST,
             force_packaged: true,
         }
     }
@@ -144,16 +143,16 @@ impl Project {
             let mut buf = Vec::new();
             // FIXME: we need to re-design `Template` so we can manipulate its elements
             if "$package$" == base.to_string_lossy().as_ref() && self.force_packaged {
-                Template::compile_inline(&mut buf,
-                                         Style::Pathname,
-                                         "$package__packaged$",
-                                         &params.param_map)
+                Template::write_once(&mut buf,
+                                     Style::Path,
+                                     "$package__packaged$",
+                                     &params.param_map)
                     .unwrap();
             } else {
-                Template::compile_inline(&mut buf,
-                                         Style::Pathname,
-                                         &base.to_string_lossy(),
-                                         &params.param_map)
+                Template::write_once(&mut buf,
+                                     Style::Path,
+                                     &base.to_string_lossy(),
+                                     &params.param_map)
                     .unwrap();
             }
 
@@ -175,7 +174,7 @@ impl Project {
                         .open(dest.as_path())
                         .unwrap();
 
-                    tpl.write(&mut f, &params.param_map).unwrap();
+                    tpl.write_to(&mut f, &params.param_map).unwrap();
                     f.sync_data().unwrap();
                 } else if entry.file_type().is_dir() {
                     fs::create_dir_all(dest.as_path()).expect("Failed to copy directory");
