@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::ascii::AsciiExt;
 use std::convert::From;
 
