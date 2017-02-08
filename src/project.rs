@@ -10,7 +10,7 @@ use walkdir::{DirEntry, WalkDir, WalkDirIterator};
 
 use super::errors::*;
 use super::fsutils;
-use super::template::{Placeholder, Style, Params, Template};
+use super::template::{Style, Params, Template};
 
 #[derive(Debug)]
 pub struct Project {
