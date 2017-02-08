@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::fmt;
 use std::path::{Path, PathBuf};
-use std::result::Result as StdResult;
 use std::str;
 
 use java_properties;
@@ -27,16 +25,6 @@ pub struct Project {
 pub enum ConfigFormat {
     JavaProps,
     Toml,
-}
-
-impl fmt::Display for ConfigFormat {
-    fn fmt(&self, f: &mut fmt::Formatter) -> StdResult<(), fmt::Error> {
-        let name = match *self {
-            ConfigFormat::JavaProps => "default.properties",
-            ConfigFormat::Toml => "_rig.toml",
-        };
-        write!(f, "{}", &name)
-    }
 }
 
 impl Default for Project {
@@ -68,6 +56,13 @@ impl Project {
             config_format: ConfigFormat::JavaProps,
             style: Style::Giter8,
             force_packaged: true,
+        }
+    }
+
+    pub fn config_name(&self) -> &'static str {
+        match self.config_format {
+            ConfigFormat::JavaProps => "default.properties",
+            ConfigFormat::Toml => "_rig.toml",
         }
     }
 
@@ -105,7 +100,7 @@ impl Project {
         let walker = WalkDir::new(&root).into_iter();
 
         let mut file_map: HashMap<OsString, String> = HashMap::new();
-        let default_file = root.join(format!("{}", &self.config_format));
+        let default_file = root.join(self.config_name());
 
         if !dry_run {
             fs::create_dir_all(dest).unwrap();
@@ -199,7 +194,7 @@ fn is_git_metadata(entry: &DirEntry) -> bool {
 }
 
 fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
-    let defaults_file = root_dir.join(format!("{}", project.config_format));
+    let defaults_file = root_dir.join(project.config_name());
 
     match project.config_format {
         ConfigFormat::JavaProps => {
@@ -208,7 +203,7 @@ fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
                     let props = java_properties::read(f).unwrap();
                     Params::from_map(props)
                 })
-                .map_err(|e| ErrorKind::Io(e).into())
+                .map_err(|e| ErrorKind::Io(e).into()) // Should convert ParseError
         }
         ConfigFormat::Toml => {
             fsutils::read_file(&defaults_file)
