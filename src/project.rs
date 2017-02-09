@@ -113,55 +113,7 @@ impl Project {
                 continue;
             }
 
-            let mut segment: Vec<&OsStr> = Vec::new();
-            let mut rel_path_up = entry.path().parent();
-            let mut upwards = 1;
-            while let Some(parent) = rel_path_up {
-                if upwards >= entry.depth() {
-                    break;
-                } else {
-                    segment.push(parent.file_name().unwrap_or("".as_ref()));
-                }
-                upwards += 1;
-                rel_path_up = parent.parent();
-            }
-
-            let base = entry.file_name();
-            let mut dest = dest.to_path_buf();
-            if !segment.is_empty() {
-                segment.reverse();
-                for part in segment {
-                    if let Some(rep) = file_map.get(part) {
-                        debug!("File tree altered: {:?} => {:?}", part, rep);
-                        dest.push(rep);
-                    } else {
-                        dest.push(part);
-                    }
-                }
-            }
-
-            let mut buf = Vec::new();
-            // FIXME: we need to re-design `Template` so we can manipulate its elements
-            if "$package$" == base.to_string_lossy().as_ref() && self.force_packaged {
-                Template::write_once(&mut buf,
-                                     Style::Path,
-                                     "$package__packaged$",
-                                     &params.param_map)
-                    .unwrap();
-            } else {
-                Template::write_once(&mut buf,
-                                     Style::Path,
-                                     &base.to_string_lossy(),
-                                     &params.param_map)
-                    .unwrap();
-            }
-
-            let name = String::from_utf8(buf).unwrap();
-            if &name != base.to_string_lossy().as_ref() {
-                file_map.insert(base.to_os_string(), name.clone());
-            }
-            dest.push(&name);
-            debug!("Destination entry: {:?}", dest);
+            let dest = resolve_dirname(self, &entry, dest, &mut file_map, params);
 
             // TODO:
             if !dry_run {
@@ -190,6 +142,67 @@ impl Project {
 fn is_git_metadata(entry: &DirEntry) -> bool {
     let is_git = entry.file_name().to_str().map(|s| s == ".git").unwrap_or(false);
     fsutils::is_directory(entry.path()) && is_git
+}
+
+fn resolve_dirname(project: &Project,
+                   entry: &DirEntry,
+                   dest_root: &Path,
+                   alt_paths: &mut HashMap<OsString, String>,
+                   params: &Params)
+                   -> PathBuf
+{
+
+    let mut segment: Vec<&OsStr> = Vec::new();
+    let mut rel_path_up = entry.path().parent();
+    let mut upwards = 1;
+    while let Some(parent) = rel_path_up {
+        if upwards >= entry.depth() {
+            break;
+        } else {
+            segment.push(parent.file_name().unwrap_or("".as_ref()));
+        }
+        upwards += 1;
+        rel_path_up = parent.parent();
+    }
+
+    let base = entry.file_name();
+    let mut dest = dest_root.to_path_buf();
+    if !segment.is_empty() {
+        segment.reverse();
+        for part in segment {
+            if let Some(rep) = alt_paths.get(part) {
+                debug!("File tree altered: {:?} => {:?}", part, rep);
+                dest.push(rep);
+            } else {
+                dest.push(part);
+            }
+        }
+    }
+
+    let mut buf = Vec::new();
+    // FIXME: we need to re-design `Template` so we can manipulate its elements
+    if "$package$" == base.to_string_lossy().as_ref() && project.force_packaged {
+        Template::write_once(&mut buf,
+                             Style::Path,
+                             "$package__packaged$",
+                             &params.param_map)
+            .unwrap();
+    } else {
+        Template::write_once(&mut buf,
+                             Style::Path,
+                             &base.to_string_lossy(),
+                             &params.param_map)
+            .unwrap();
+    }
+
+    let name = String::from_utf8(buf).unwrap();
+    if &name != base.to_string_lossy().as_ref() {
+        alt_paths.insert(base.to_os_string(), name.clone());
+    }
+    dest.push(&name);
+    debug!("Destination entry: {:?}", dest);
+
+    dest
 }
 
 fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
