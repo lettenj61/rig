@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use java_properties;
+use serde_json;
+use tera::{Context, Tera};
 use toml;
 use walkdir::{DirEntry, WalkDir, WalkDirIterator};
 
@@ -15,13 +17,13 @@ use super::template::{Style, Params, Template};
 #[derive(Debug)]
 pub struct Project {
     pub root_path: Option<String>,
-    pub config_format: ConfigFormat,
+    pub config: Configuration,
     pub style: Style,
     pub force_packaged: bool,
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum ConfigFormat {
+pub enum Configuration {
     JavaProps,
     Toml,
 }
@@ -30,7 +32,7 @@ impl Default for Project {
     fn default() -> Project {
         Project {
             root_path: None,
-            config_format: ConfigFormat::Toml,
+            config: Configuration::Toml,
             style: Style::Tera,
             force_packaged: false,
         }
@@ -38,12 +40,12 @@ impl Default for Project {
 }
 
 impl Project {
-    pub fn new<S>(root: Option<S>, config_format: ConfigFormat, packaged: bool) -> Project
+    pub fn new<S>(root: Option<S>, config: Configuration, packaged: bool) -> Project
         where S: AsRef<str>
     {
         Project {
             root_path: root.map(|v| v.as_ref().to_owned()),
-            config_format: config_format,
+            config: config,
             style: Style::Tera,
             force_packaged: packaged,
         }
@@ -52,16 +54,16 @@ impl Project {
     pub fn new_g8(root: Option<&str>) -> Project {
         Project {
             root_path: root.map(|v| v.to_string()),
-            config_format: ConfigFormat::JavaProps,
+            config: Configuration::JavaProps,
             style: Style::ST,
             force_packaged: true,
         }
     }
 
     pub fn config_name(&self) -> &'static str {
-        match self.config_format {
-            ConfigFormat::JavaProps => "default.properties",
-            ConfigFormat::Toml => "_rig.toml",
+        match self.config {
+            Configuration::JavaProps => "default.properties",
+            Configuration::Toml => "_rig.toml",
         }
     }
 
@@ -98,12 +100,9 @@ impl Project {
         let root = self.resolve_root_dir(clone_root);
         let walker = WalkDir::new(&root).into_iter();
 
-        let mut file_map: HashMap<OsString, String> = HashMap::new();
+        let mut name_map: HashMap<OsString, String> = HashMap::new();
+        let mut tree: Vec<(DirEntry, PathBuf)> = Vec::new();
         let default_file = root.join(self.config_name());
-
-        if !dry_run {
-            fs::create_dir_all(dest).unwrap();
-        }
 
         for entry in walker.filter_entry(|e| !is_git_metadata(e)) {
             let entry = entry.unwrap();
@@ -113,29 +112,87 @@ impl Project {
                 continue;
             }
 
-            let dest = resolve_dirname(self, &entry, dest, &mut file_map, params);
+            &tree.push((entry.clone(), resolve_dirname(self, &entry, dest, &mut name_map, params)));
 
-            // TODO:
-            if !dry_run {
-                if entry.file_type().is_file() {
-                    let mut tpl = Template::read_file(self.style.clone(), &entry.path()).unwrap();
-                    let mut f = fs::OpenOptions::new()
-                        .write(true)
-                        .truncate(true)
-                        .create(true)
-                        .open(dest.as_path())
-                        .unwrap();
-
-                    tpl.write_to(&mut f, &params.param_map).unwrap();
-                    f.sync_data().unwrap();
-                } else if entry.file_type().is_dir() {
-                    fs::create_dir_all(dest.as_path()).expect("Failed to copy directory");
-                }
+        }
+        // TODO:
+        if !dry_run {
+            fs::create_dir_all(dest).unwrap();
+            match self.style {
+                Style::Tera => self.generate_with_tera(params, tree),
+                _ => self.generate_tree(params, tree)
             }
         }
-        debug!("{:?}", &file_map);
+        debug!("{:?}", &name_map);
 
         Ok(())
+    }
+
+    fn generate_tree(&self, params: &Params, tree: Vec<(DirEntry, PathBuf)>) {
+
+        for loc in tree {
+            let (src, dest) = loc;
+
+            if src.file_type().is_file() {
+
+                let mut f = fs::OpenOptions::new()
+                    .write(true)
+                    .truncate(true)
+                    .create(true)
+                    .open(dest.as_path())
+                    .unwrap();
+
+                let mut tpl = Template::read_file(self.style.clone(),
+                                                  &src.path())
+                    .unwrap();
+                tpl.write_to(&mut f, &params.param_map).unwrap();
+                f.sync_data().unwrap();
+
+            } else if src.file_type().is_dir() {
+                fs::create_dir_all(dest.as_path()).expect("Creating directory");
+            }
+        }
+    }
+
+    fn generate_with_tera(&self,
+                          params: &Params,
+                          tree: Vec<(DirEntry, PathBuf)>) {
+
+        let mut tera = Tera::default();
+        let mut ctx = Context::new();
+
+        // TODO: maybe we don't want whole toml content mapped into context
+        if let Some(ref toml) = params.toml {
+            for (k, v) in toml {
+                &ctx.add(&k, &toml_to_json(v.clone()));
+            }
+        }
+
+        for ref loc in &tree {
+            let (ref src, ref dest) = **loc;
+            if src.file_type().is_file() {
+                tera.add_template_file(&src.path(),
+                                       Some(dest.to_string_lossy().as_ref()))
+                    .unwrap();
+            }
+        }
+        debug!("{:?}", &tera.templates);
+
+        for loc in tree {
+            let (src, dest) = loc;
+            debug!("{:?} => {:?}", &src, &dest);
+
+            if src.file_type().is_file() {
+
+                let content = tera
+                    .render(dest.to_string_lossy().as_ref(), ctx.clone())
+                    .unwrap();
+
+                fsutils::write_file(&dest, &content).unwrap();
+            } else {
+                fs::create_dir_all(dest.as_path()).expect("Creating directory");
+            }
+        }
     }
 }
 
@@ -208,8 +265,9 @@ fn resolve_dirname(project: &Project,
 fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
     let defaults_file = root_dir.join(project.config_name());
 
-    match project.config_format {
-        ConfigFormat::JavaProps => {
+    // TODO: get default value from specific toml table if there is any
+    match project.config {
+        Configuration::JavaProps => {
             fs::File::open(&defaults_file)
                 .map(|f| {
                     let props = java_properties::read(f).unwrap();
@@ -217,14 +275,36 @@ fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
                 })
                 .map_err(|e| ErrorKind::Io(e).into()) // Should convert ParseError
         }
-        ConfigFormat::Toml => {
+        Configuration::Toml => {
             fsutils::read_file(&defaults_file)
                 .map(|s| {
                     let mut parser = toml::Parser::new(&s);
                     let tbl = parser.parse().unwrap();
-                    Params::convert_toml(&tbl)
+                    Params::convert_toml(tbl)
                 })
                 .chain_err(|| ErrorKind::TomlDecodeFailure)
         }
+    }
+}
+
+fn toml_to_json(toml: toml::Value) -> serde_json::Value {
+
+    use serde_json::Value as Json;
+    use toml::Value as Toml;
+
+    match toml {
+        Toml::String(s) => Json::String(s),
+        Toml::Integer(i) => Json::Number(i.into()),
+        Toml::Float(f) => {
+            let n = serde_json::Number::from_f64(f)
+                        .expect("float infinite and nan not allowed");
+            Json::Number(n)
+        }
+        Toml::Boolean(b) => Json::Bool(b),
+        Toml::Array(arr) => Json::Array(arr.into_iter().map(toml_to_json).collect()),
+        Toml::Table(table) => Json::Object(table.into_iter().map(|(k, v)| {
+            (k, toml_to_json(v))
+        }).collect()),
+        Toml::Datetime(dt) => Json::String(dt.to_string()),
     }
 }

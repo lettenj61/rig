@@ -4,6 +4,7 @@ use std::io::{self, Write};
 use std::path::Path;
 
 use toml::{Table, Value};
+
 use super::format::{self, Formatter};
 use super::fsutils;
 use super::parser;
@@ -104,12 +105,12 @@ impl Template {
             if !raw.is_empty() {
                 writer.write(raw.as_bytes()).unwrap();
             }
-    
+
             if let Some(ph) = maybe_ph {
                 let value = ph.format_with(&params);
                 writer.write(value.as_bytes()).unwrap();
             }
-    
+
             if rest.is_empty() {
                 writer.flush().unwrap();
                 break;
@@ -140,6 +141,7 @@ impl Template {
 #[derive(Debug, Clone)]
 pub struct Params {
     pub param_map: HashMap<String, String>,
+    pub toml: Option<Table>,
 }
 
 impl Params {
@@ -151,17 +153,17 @@ impl Params {
     }
 
     pub fn from_map(map: HashMap<String, String>) -> Params {
-        Params { param_map: map }
+        Params { param_map: map, toml: None }
     }
 
-    pub fn convert_toml(toml: &Table) -> Params {
+    pub fn convert_toml(toml: Table) -> Params {
         let mut raw_values = HashMap::new();
-        for (k, tv) in toml {
-            if let Some(v) = convert(tv) {
+        for (k, tv) in &toml {
+            if let Some(v) = convert(&tv) {
                 raw_values.insert(k.clone(), v);
             }
         }
-        Params { param_map: raw_values }
+        Params { param_map: raw_values, toml: Some(toml) }
     }
 
     pub fn get(&self, key: &str) -> Option<&String> {
