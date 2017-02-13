@@ -64,7 +64,7 @@ struct Args {
     flag_confirm: bool,
     flag_giter8: bool,
     flag_dry_run: bool,
-    flag_no_logo: bool, // I wish someday I could draw some logo
+    // flag_no_logo: bool, // I wish someday I could draw some logo
     flag_help: bool,
     flag_version: bool,
 }
