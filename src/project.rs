@@ -63,7 +63,7 @@ impl Project {
     pub fn config_name(&self) -> &'static str {
         match self.config {
             Configuration::JavaProps => "default.properties",
-            Configuration::Toml => "_rig.toml",
+            Configuration::Toml => "Rig.toml",
         }
     }
 
@@ -278,8 +278,7 @@ fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
         Configuration::Toml => {
             fsutils::read_file(&defaults_file)
                 .map(|s| {
-                    let mut parser = toml::Parser::new(&s);
-                    let tbl = parser.parse().unwrap();
+                    let tbl: toml::value::Table = toml::from_str(&s).unwrap();
                     Params::convert_toml(tbl)
                 })
                 .chain_err(|| ErrorKind::TomlDecodeFailure)

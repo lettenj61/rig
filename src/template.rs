@@ -3,7 +3,7 @@ use std::convert::From;
 use std::io::{self, Write};
 use std::path::Path;
 
-use toml::{Table, Value};
+use toml::value::{Table, Value};
 
 use super::format::{self, Formatter};
 use super::fsutils;
@@ -175,7 +175,7 @@ impl Params {
 fn convert(value: &Value) -> Option<String> {
     match *value {
         Value::String(_) => value.as_str().map(|s| s.to_owned()),
-        Value::Datetime(_) => value.as_datetime().map(|s| s.to_owned()),
+        Value::Datetime(_) => value.as_datetime().map(|s| s.to_string()),
         Value::Integer(_) => value.as_integer().map(|i| i.to_string()),
         Value::Float(_) => value.as_float().map(|f| f.to_string()),
         Value::Boolean(_) => value.as_bool().map(|b| b.to_string()),
