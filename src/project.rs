@@ -161,11 +161,9 @@ impl Project {
         let mut tera = Tera::default();
         let mut ctx = Context::new();
 
-        // TODO: maybe we don't want whole toml content mapped into context
-        if let Some(ref toml) = params.toml {
-            for (k, v) in toml {
-                &ctx.add(&k, &toml_to_json(v.clone()));
-            }
+        // TODO: which toml table will be used in context?
+        for (k, v) in &params.param_map {
+            &ctx.add(&k, &v);
         }
 
         for ref loc in &tree {
@@ -283,27 +281,5 @@ fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
                 })
                 .chain_err(|| ErrorKind::TomlDecodeFailure)
         }
-    }
-}
-
-fn toml_to_json(toml: toml::Value) -> serde_json::Value {
-
-    use serde_json::Value as Json;
-    use toml::Value as Toml;
-
-    match toml {
-        Toml::String(s) => Json::String(s),
-        Toml::Integer(i) => Json::Number(i.into()),
-        Toml::Float(f) => {
-            let n = serde_json::Number::from_f64(f)
-                        .expect("float infinite and nan not allowed");
-            Json::Number(n)
-        }
-        Toml::Boolean(b) => Json::Bool(b),
-        Toml::Array(arr) => Json::Array(arr.into_iter().map(toml_to_json).collect()),
-        Toml::Table(table) => Json::Object(table.into_iter().map(|(k, v)| {
-            (k, toml_to_json(v))
-        }).collect()),
-        Toml::Datetime(dt) => Json::String(dt.to_string()),
     }
 }
