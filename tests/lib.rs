@@ -150,7 +150,7 @@ mod project_test {
     use std::fs;
 
     use rig::fsutils;
-    use rig::project::{ConfigFormat, Project};
+    use rig::project::{Configuration, Project};
 
     const G8_PROPS: &'static str = r#"
         name = value1
@@ -181,14 +181,14 @@ mod project_test {
             fs::create_dir_all(dir).unwrap();
         }
 
-        let toml = src.join("_rig.toml");
+        let toml = src.join("Rig.toml");
         fsutils::write_file(&toml, TOML).unwrap();
         assert!(fsutils::exists(&toml));
 
         let dest = tempdir::TempDir::new("generated-proj").unwrap();
         let dest = dest.path();
 
-        let project = Project::new(None as Option<&str>, ConfigFormat::Toml, false);
+        let project = Project::new(None as Option<&str>, Configuration::Toml, false);
         let params = project.default_params(&src).unwrap();
         assert_eq!(params.get("name"), Some(&"My Project".to_owned()));
         assert_eq!(params.get("module_name"), Some(&"quux".to_owned()));
