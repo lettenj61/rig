@@ -8,6 +8,7 @@ extern crate git2;
 extern crate java_properties;
 #[macro_use]
 extern crate log;
+extern crate rand;
 extern crate rustc_serialize;
 extern crate serde;
 extern crate serde_json;
