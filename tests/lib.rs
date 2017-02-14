@@ -2,6 +2,7 @@ extern crate rig;
 
 mod format_test {
 
+    use std::ascii::AsciiExt;
     use rig::format::format;
 
     const W: &'static str = "Fabulous Is Rust";
@@ -67,6 +68,16 @@ mod format_test {
     fn directory_path() {
         let p = "path.to.my.directory";
         assert_eq!(format(p, "packaged".into()), "path/to/my/directory");
+    }
+
+    #[test]
+    fn add_random() {
+        let len = W.len();
+        let added = format(W, "random".into());
+        assert_eq!(added.len(), len + 33); // 32 bytes of random chars + '-'
+        for c in added[32..].chars() {
+            assert!(c.is_alphanumeric() && c.is_ascii());
+        }
     }
 }
 

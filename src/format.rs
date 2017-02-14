@@ -1,6 +1,8 @@
 use std::ascii::AsciiExt;
 use std::convert::From;
 
+use rand::{thread_rng, Rng};
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Formatter {
     Ident,
@@ -55,12 +57,13 @@ fn process_words<F>(s: &str, f: F) -> String
         .into()
 }
 
-fn join_camel_case(s: &str, pascal: bool) -> String {
+fn join_camel_case(s: &str, cap: bool) -> String {
     if let Some(_) = s.find(' ') {
         let mut words = s.split_whitespace();
-        let head = match pascal {
-            true => capitalize(words.next().unwrap()),
-            false => (words.next().unwrap()).to_lowercase(),
+        let head = if cap {
+            capitalize(words.next().unwrap())
+        } else {
+            (words.next().unwrap()).to_lowercase()
         };
         let tail = words.map(capitalize).collect::<Vec<_>>().concat();
         word_chars_only(&(head + &tail))
@@ -129,6 +132,14 @@ fn dedup_whitespace(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+fn add_random(s: &str) -> String {
+    let mut r = thread_rng();
+    let mut s = s.to_string();
+    s.push('-');
+    s.extend(r.gen_ascii_chars().take(32));
+    s
+}
+
 /// format a `&str` sentence to `String`.
 pub fn format(s: &str, f: Formatter) -> String {
     match f {
@@ -144,6 +155,7 @@ pub fn format(s: &str, f: Formatter) -> String {
         Formatter::Normalize => normalize(s),
         Formatter::SnakeCase => snake_case(s),
         Formatter::DirectoryPath => directory_path(s),
+        Formatter::AddRandom => add_random(s),
         _ => s.into(),
     }
 }
