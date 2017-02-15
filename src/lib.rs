@@ -13,12 +13,14 @@ extern crate rustc_serialize;
 extern crate serde;
 extern crate serde_json;
 extern crate tempdir;
+#[macro_use]
 extern crate tera;
 extern crate toml;
 extern crate url;
 extern crate walkdir;
 
 pub mod errors;
+pub mod filters;
 pub mod format;
 pub mod fsutils;
 pub mod parser;

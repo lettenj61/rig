@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fs;
@@ -5,12 +6,12 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use java_properties;
-use serde_json;
 use tera::{Context, Tera};
 use toml;
 use walkdir::{DirEntry, WalkDir, WalkDirIterator};
 
 use super::errors::*;
+use super::filters;
 use super::fsutils;
 use super::template::{Style, Params, Template};
 
@@ -160,6 +161,7 @@ impl Project {
 
         let mut tera = Tera::default();
         let mut ctx = Context::new();
+        init_tera_filters(&mut tera);
 
         // TODO: which toml table will be used in context?
         for (k, v) in &params.param_map {
@@ -236,19 +238,15 @@ fn resolve_dirname(project: &Project,
 
     let mut buf = Vec::new();
     // FIXME: we need to re-design `Template` so we can manipulate its elements
-    if "$package$" == base.to_string_lossy().as_ref() && project.force_packaged {
-        Template::write_once(&mut buf,
-                             Style::Path,
-                             "$package__packaged$",
-                             &params.param_map)
-            .unwrap();
-    } else {
-        Template::write_once(&mut buf,
-                             Style::Path,
-                             &base.to_string_lossy(),
-                             &params.param_map)
-            .unwrap();
+    let mut pkg = base.to_string_lossy();
+    if pkg.as_ref() == "$package$" && project.force_packaged {
+        pkg = Cow::from("$package__packaged$");
     }
+    Template::write_once(&mut buf,
+                         Style::Path,
+                         pkg,
+                         &params.param_map)
+        .unwrap();
 
     let name = String::from_utf8(buf).unwrap();
     if &name != base.to_string_lossy().as_ref() {
@@ -282,4 +280,17 @@ fn get_defaults(project: &Project, root_dir: &Path) -> Result<Params> {
                 .chain_err(|| ErrorKind::TomlDecodeFailure)
         }
     }
+}
+
+fn init_tera_filters(tera: &mut Tera) {
+    tera.register_filter("decap", filters::decap);
+    tera.register_filter("word", filters::word);
+    tera.register_filter("hyphen", filters::hyphen);
+    tera.register_filter("start", filters::start);
+    tera.register_filter("Camel", filters::upper_camel);
+    tera.register_filter("camel", filters::lower_camel);
+    tera.register_filter("norm", filters::norm);
+    tera.register_filter("snake", filters::snake);
+    tera.register_filter("packaged", filters::packaged);
+    tera.register_filter("random", filters::random);
 }
